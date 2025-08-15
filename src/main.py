@@ -26,7 +26,7 @@ from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.logging import setup_logging
-from app.routes import packages, notifications, files, admin, auth
+from app.routes import packages, notifications, files, admin, auth, customers, web
 from app.utils.health_check import health_check_router
 
 # =============================================================================
@@ -144,35 +144,13 @@ async def health_check() -> Dict[str, Any]:
 app.include_router(health_check_router, prefix="/health", tags=["health"])
 
 # API routers
-app.include_router(
-    packages.router,
-    prefix="/api/v1/packages",
-    tags=["packages"]
-)
-
-app.include_router(
-    notifications.router,
-    prefix="/api/v1/notifications",
-    tags=["notifications"]
-)
-
-app.include_router(
-    files.router,
-    prefix="/api/v1/files",
-    tags=["files"]
-)
-
-app.include_router(
-    auth.router,
-    prefix="/api/v1/auth",
-    tags=["authentication"]
-)
-
-app.include_router(
-    admin.router,
-    prefix="/api/v1/admin",
-    tags=["admin"]
-)
+app.include_router(auth.router)
+app.include_router(packages.router)
+app.include_router(customers.router)
+app.include_router(notifications.router)
+app.include_router(files.router)
+app.include_router(admin.router)
+app.include_router(web.router)
 
 # =============================================================================
 # Manejo de errores
