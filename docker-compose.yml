@@ -1,0 +1,254 @@
+version: '3.8'
+
+services:
+  # =============================================================================
+  # FASTAPI APPLICATION
+  # =============================================================================
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paqueteria-fastapi
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=mysql+pymysql://paqueteria_user:paqueteria_pass@mysql:3306/paqueteria
+      - DEBUG=False
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    depends_on:
+      - mysql
+    networks:
+      - paqueteria-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # =============================================================================
+  # MYSQL DATABASE
+  # =============================================================================
+  mysql:
+    image: mysql:8.0
+    container_name: paqueteria-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_change_in_production
+      MYSQL_DATABASE: paqueteria
+      MYSQL_USER: paqueteria_user
+      MYSQL_PASSWORD: paqueteria_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./scripts/mysql.cnf:/etc/mysql/conf.d/custom.cnf
+    networks:
+      - paqueteria-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # =============================================================================
+  # NGINX REVERSE PROXY
+  # =============================================================================
+  nginx:
+    image: nginx:1.24-alpine
+    container_name: paqueteria-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - fastapi
+    networks:
+      - paqueteria-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # ADMINER (Database Management)
+  # =============================================================================
+  adminer:
+    image: adminer:4.8.1
+    container_name: paqueteria-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    depends_on:
+      - mysql
+    networks:
+      - paqueteria-network
+
+  # =============================================================================
+  # REDIS (Cache and Session Storage)
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: paqueteria-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./scripts/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - paqueteria-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # CELERY WORKER (Background Tasks)
+  # =============================================================================
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paqueteria-celery-worker
+    restart: unless-stopped
+    command: celery -A src.app.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=mysql+pymysql://paqueteria_user:paqueteria_pass@mysql:3306/paqueteria
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - paqueteria-network
+
+  # =============================================================================
+  # CELERY BEAT (Scheduled Tasks)
+  # =============================================================================
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paqueteria-celery-beat
+    restart: unless-stopped
+    command: celery -A src.app.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=mysql+pymysql://paqueteria_user:paqueteria_pass@mysql:3306/paqueteria
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - paqueteria-network
+
+  # =============================================================================
+  # FLOWER (Celery Monitoring)
+  # =============================================================================
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paqueteria-flower
+    restart: unless-stopped
+    command: celery -A src.app.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      - redis
+      - celery_worker
+    networks:
+      - paqueteria-network
+
+  # =============================================================================
+  # PROMETHEUS (Monitoring)
+  # =============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: paqueteria-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - paqueteria-network
+
+  # =============================================================================
+  # GRAFANA (Monitoring Dashboard)
+  # =============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: paqueteria-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - paqueteria-network
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  paqueteria-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
