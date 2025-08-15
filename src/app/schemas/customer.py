@@ -157,7 +157,7 @@ class CustomerStats(BaseModel):
 
 class CustomerExport(BaseModel):
     """Esquema para exportación de clientes"""
-    format: str = Field(default="csv", regex="^(csv|excel|json)$", description="Formato de exportación")
+    format: str = Field(default="csv", pattern="^(csv|excel|json)$", description="Formato de exportación")
     include_packages: bool = Field(default=False, description="Incluir información de paquetes")
     date_from: Optional[datetime] = Field(None, description="Fecha desde")
     date_to: Optional[datetime] = Field(None, description="Fecha hasta")

@@ -1,5 +1,4 @@
 {% extends "layouts/base.html" %}
-{% from "components/form.html" import text_input, textarea, select, checkbox, search_input, pagination %}
 
 {% block title %}Recibir Paquetes - Sistema de Paquetería{% endblock %}
 
@@ -13,29 +12,122 @@
                 <p class="mt-2 text-gray-600">Gestionar la recepción de paquetes anunciados</p>
             </div>
             <div class="flex items-center space-x-2">
-                <i class="fas fa-download text-blue-600 text-2xl"></i>
+                <i class="fas fa-download text-primary-600 text-2xl"></i>
             </div>
         </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-box text-blue-600 text-2xl"></i>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Paquetes Anunciados</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ stats.announced_count }}</dd>
-                        </dl>
+    <!-- Search and Filters -->
+    <div class="bg-white shadow rounded-lg mb-6" x-data="receiveFilters()">
+        <div class="p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                <i class="fas fa-search text-primary-600 mr-2"></i>
+                Buscar y Filtrar
+            </h3>
+            
+            <form hx-get="/packages/pending" 
+                  hx-target="#packages-list" 
+                  hx-trigger="change, submit"
+                  hx-indicator="#loading-indicator"
+                  class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                <!-- Search -->
+                <div>
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">
+                        Buscar
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <input type="text" 
+                               id="search" 
+                               name="search" 
+                               x-model="filters.search"
+                               class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                               placeholder="Tracking, cliente, descripción...">
                     </div>
                 </div>
-            </div>
+                
+                <!-- Status Filter -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">
+                        Estado
+                    </label>
+                    <select id="status" 
+                            name="status" 
+                            x-model="filters.status"
+                            class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
+                        <option value="">Todos</option>
+                        <option value="announced">Anunciados</option>
+                        <option value="received">Recibidos</option>
+                        <option value="delivered">Entregados</option>
+                        <option value="expired">Expirados</option>
+                    </select>
+                </div>
+                
+                <!-- Date Range -->
+                <div>
+                    <label for="date_from" class="block text-sm font-medium text-gray-700 mb-2">
+                        Desde
+                    </label>
+                    <input type="date" 
+                           id="date_from" 
+                           name="date_from" 
+                           x-model="filters.date_from"
+                           class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
+                </div>
+                
+                <div>
+                    <label for="date_to" class="block text-sm font-medium text-gray-700 mb-2">
+                        Hasta
+                    </label>
+                    <input type="date" 
+                           id="date_to" 
+                           name="date_to" 
+                           x-model="filters.date_to"
+                           class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
+                </div>
+                
+                <!-- Additional Filters -->
+                <div class="md:col-span-4">
+                    <div class="flex flex-wrap gap-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" 
+                                   id="urgent_only" 
+                                   name="urgent_only" 
+                                   x-model="filters.urgent_only"
+                                   class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                            <label for="urgent_only" class="ml-2 block text-sm text-gray-900">
+                                Solo Urgentes
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input type="checkbox" 
+                                   id="with_storage_fee" 
+                                   name="with_storage_fee" 
+                                   x-model="filters.with_storage_fee"
+                                   class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                            <label for="with_storage_fee" class="ml-2 block text-sm text-gray-900">
+                                Con Bodegaje
+                            </label>
+                        </div>
+                        
+                        <button type="button" 
+                                @click="clearFilters"
+                                class="text-sm text-primary-600 hover:text-primary-500">
+                            <i class="fas fa-times mr-1"></i>
+                            Limpiar Filtros
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
+    </div>
 
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <div class="bg-white overflow-hidden shadow rounded-lg">
             <div class="p-5">
                 <div class="flex items-center">
@@ -44,14 +136,30 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Pendientes de Recepción</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ stats.pending_count }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Pendientes</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="pending-count">0</dd>
                         </dl>
                     </div>
                 </div>
             </div>
         </div>
-
+        
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check text-green-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Recibidos Hoy</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="received-today">0</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class="bg-white overflow-hidden shadow rounded-lg">
             <div class="p-5">
                 <div class="flex items-center">
@@ -61,365 +169,208 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">Urgentes</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ stats.urgent_count }}</dd>
+                            <dd class="text-lg font-medium text-gray-900" id="urgent-count">0</dd>
                         </dl>
                     </div>
                 </div>
             </div>
         </div>
-
+        
         <div class="bg-white overflow-hidden shadow rounded-lg">
             <div class="p-5">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <i class="fas fa-calendar text-green-600 text-2xl"></i>
+                        <i class="fas fa-dollar-sign text-blue-600 text-2xl"></i>
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Recibidos Hoy</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ stats.received_today }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Ingresos Hoy</dt>
+                            <dd class="text-lg font-medium text-gray-900" id="revenue-today">$0</dd>
                         </dl>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filters and Search -->
-    <div class="bg-white shadow rounded-lg p-6 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
-                {{ search_input("search", "Buscar por tracking, cliente...", search_query) }}
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                {{ select("status_filter", "", [
-                    ("all", "Todos"),
-                    ("announced", "Anunciados"),
-                    ("received", "Recibidos"),
-                    ("urgent", "Urgentes")
-                ], status_filter) }}
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
-                {{ select("type_filter", "", [
-                    ("all", "Todos"),
-                    ("normal", "Normal"),
-                    ("extra_dimensioned", "Extra Dimensionado")
-                ], type_filter) }}
-            </div>
-            
-            <div class="flex items-end">
-                <button type="button" 
-                        @click="applyFilters()"
-                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <i class="fas fa-filter mr-2"></i>
-                    Filtrar
-                </button>
             </div>
         </div>
     </div>
 
     <!-- Packages List -->
-    <div class="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul class="divide-y divide-gray-200" id="packages-list">
-            {% for package in packages %}
-            <li class="package-item" 
-                data-tracking="{{ package.tracking_number }}"
-                data-status="{{ package.status.value }}"
-                data-type="{{ package.package_type.value }}"
-                data-urgent="{{ package.is_urgent|lower }}">
-                <div class="px-4 py-4 sm:px-6">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                    <i class="fas fa-box text-blue-600"></i>
-                                </div>
-                            </div>
-                            <div class="ml-4">
-                                <div class="flex items-center">
-                                    <p class="text-sm font-medium text-gray-900">
-                                        {{ package.tracking_number }}
-                                        {% if package.is_urgent %}
-                                            <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                <i class="fas fa-exclamation-triangle mr-1"></i>Urgente
-                                            </span>
-                                        {% endif %}
-                                    </p>
-                                </div>
-                                <div class="mt-1 flex items-center text-sm text-gray-500">
-                                    <p class="truncate">{{ package.description }}</p>
-                                </div>
-                                <div class="mt-1 flex items-center text-sm text-gray-500">
-                                    <i class="fas fa-user mr-1"></i>
-                                    <span>{{ package.customer.full_name }}</span>
-                                    <span class="mx-2">•</span>
-                                    <i class="fas fa-phone mr-1"></i>
-                                    <span>{{ package.customer.formatted_phone }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center space-x-4">
-                            <div class="text-right">
-                                <p class="text-sm font-medium text-gray-900">
-                                    {{ package.formatted_cost }}
-                                </p>
-                                <p class="text-sm text-gray-500">
-                                    {{ package.get_package_type_display() }}
-                                </p>
-                                <p class="text-sm text-gray-500">
-                                    Anunciado: {{ package.announced_at.strftime('%d/%m/%Y %H:%M') }}
-                                </p>
-                            </div>
-                            
-                            <div class="flex items-center space-x-2">
-                                {% if package.status.value == 'announced' %}
-                                    <button type="button"
-                                            @click="receivePackage('{{ package.tracking_number }}')"
-                                            class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                                        <i class="fas fa-check mr-1"></i>
-                                        Recibir
-                                    </button>
-                                {% else %}
-                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        <i class="fas fa-check mr-1"></i>
-                                        Recibido
-                                    </span>
-                                {% endif %}
-                                
-                                <button type="button"
-                                        @click="viewDetails('{{ package.tracking_number }}')"
-                                        class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                    <i class="fas fa-eye mr-1"></i>
-                                    Ver
-                                </button>
-                            </div>
-                        </div>
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium text-gray-900">
+                    <i class="fas fa-boxes text-primary-600 mr-2"></i>
+                    Paquetes
+                </h3>
+                <div class="flex items-center space-x-3">
+                    <div id="loading-indicator" class="htmx-indicator">
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
                     </div>
+                    <button type="button" 
+                            @click="refreshList"
+                            class="text-sm text-primary-600 hover:text-primary-500">
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        Actualizar
+                    </button>
                 </div>
-            </li>
-            {% else %}
-            <li class="px-4 py-8 text-center">
-                <div class="flex flex-col items-center">
-                    <i class="fas fa-box-open text-gray-400 text-4xl mb-4"></i>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">No hay paquetes</h3>
-                    <p class="text-gray-500">No se encontraron paquetes con los filtros aplicados.</p>
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
+            </div>
+        </div>
+        
+        <div id="packages-list" class="divide-y divide-gray-200">
+            <!-- Loading state -->
+            <div class="p-6 text-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                <p class="mt-2 text-gray-500">Cargando paquetes...</p>
+            </div>
+        </div>
     </div>
-
-    <!-- Pagination -->
-    {% if packages and packages|length > 0 %}
-        {{ pagination(page, total_pages, "/receive") }}
-    {% endif %}
 </div>
 
 <!-- Receive Package Modal -->
 <div id="receive-modal" 
      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-     style="display: none;"
-     x-data="receiveModal()">
+     x-data="receiveModal()"
+     x-show="isOpen"
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     style="display: none;">
+    
     <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
         <div class="mt-3">
             <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
                 <i class="fas fa-check text-green-600 text-xl"></i>
             </div>
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4 text-center">Recibir Paquete</h3>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4 text-center">
+                Confirmar Recepción
+            </h3>
             <div class="mt-2 px-7 py-3">
                 <p class="text-sm text-gray-500 text-center">
                     ¿Está seguro de que desea marcar este paquete como recibido?
                 </p>
                 <div class="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p class="text-sm font-medium text-gray-700">Paquete:</p>
-                    <p class="text-lg font-bold text-blue-600" x-text="selectedPackage"></p>
-                </div>
-                
-                <!-- Additional Notes -->
-                <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Notas de Recepción (Opcional)
-                    </label>
-                    <textarea x-model="receptionNotes"
-                              rows="3"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="Notas adicionales sobre la recepción..."></textarea>
+                    <p class="text-sm font-medium text-gray-700">Tracking:</p>
+                    <p class="text-lg font-bold text-primary-600" x-text="selectedPackage?.tracking_number"></p>
+                    <p class="text-sm text-gray-600 mt-1" x-text="selectedPackage?.customer?.full_name"></p>
                 </div>
             </div>
-            <div class="items-center px-4 py-3 flex space-x-3">
-                <button @click="closeModal()"
-                        class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
-                    Cancelar
-                </button>
-                <button @click="confirmReceive()"
-                        class="flex-1 px-4 py-2 bg-green-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
-                    <i class="fas fa-check mr-2"></i>
-                    Confirmar
-                </button>
+            <div class="items-center px-4 py-3">
+                <form hx-post="/packages/{tracking_number}/receive" 
+                      hx-target="#receive-result"
+                      hx-swap="innerHTML"
+                      class="space-y-4">
+                    
+                    <div>
+                        <label for="received_notes" class="block text-sm font-medium text-gray-700 mb-2">
+                            Notas de Recepción
+                        </label>
+                        <textarea id="received_notes" 
+                                  name="received_notes" 
+                                  rows="3"
+                                  class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                  placeholder="Observaciones sobre el estado del paquete..."></textarea>
+                    </div>
+                    
+                    <div class="flex items-center">
+                        <input type="checkbox" 
+                               id="send_notification" 
+                               name="send_notification" 
+                               checked
+                               class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                        <label for="send_notification" class="ml-2 block text-sm text-gray-900">
+                            Enviar notificación al cliente
+                        </label>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" 
+                                @click="closeModal"
+                                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                            Cancelar
+                        </button>
+                        <button type="submit" 
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                            Confirmar Recepción
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Package Details Modal -->
-<div id="details-modal" 
-     class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-     style="display: none;"
-     x-data="detailsModal()">
-    <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
-        <div class="mt-3">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Detalles del Paquete</h3>
-                <button @click="closeModal()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            <div id="package-details-content">
-                <!-- Content will be loaded via HTMX -->
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
+<!-- Result Container -->
+<div id="receive-result" class="mt-6"></div>
 
-{% block scripts %}
+<!-- Alpine.js Components -->
 <script>
+function receiveFilters() {
+    return {
+        filters: {
+            search: '',
+            status: '',
+            date_from: '',
+            date_to: '',
+            urgent_only: false,
+            with_storage_fee: false
+        },
+        
+        clearFilters() {
+            this.filters = {
+                search: '',
+                status: '',
+                date_from: '',
+                date_to: '',
+                urgent_only: false,
+                with_storage_fee: false
+            };
+            
+            // Trigger HTMX request
+            htmx.trigger(document.querySelector('form'), 'submit');
+        },
+        
+        refreshList() {
+            htmx.trigger(document.querySelector('form'), 'submit');
+        }
+    }
+}
+
 function receiveModal() {
     return {
-        selectedPackage: '',
-        receptionNotes: '',
+        isOpen: false,
+        selectedPackage: null,
         
-        openModal(trackingNumber) {
-            this.selectedPackage = trackingNumber;
-            this.receptionNotes = '';
-            document.getElementById('receive-modal').style.display = 'block';
+        openModal(package) {
+            this.selectedPackage = package;
+            this.isOpen = true;
         },
         
         closeModal() {
-            document.getElementById('receive-modal').style.display = 'none';
-        },
-        
-        async confirmReceive() {
-            try {
-                const response = await fetch(`/api/packages/${this.selectedPackage}/receive`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        notes: this.receptionNotes
-                    })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Show success message
-                    if (window.app && window.app.showSuccess) {
-                        window.app.showSuccess('Paquete recibido exitosamente');
-                    }
-                    
-                    // Close modal
-                    this.closeModal();
-                    
-                    // Reload the page to update the list
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    const error = await response.json();
-                    if (window.app && window.app.showError) {
-                        window.app.showError(error.detail || 'Error al recibir el paquete');
-                    }
-                }
-            } catch (error) {
-                if (window.app && window.app.showError) {
-                    window.app.showError('Error al recibir el paquete');
-                }
-            }
+            this.isOpen = false;
+            this.selectedPackage = null;
         }
     }
 }
 
-function detailsModal() {
-    return {
-        openModal(trackingNumber) {
-            document.getElementById('details-modal').style.display = 'block';
-            
-            // Load package details via HTMX
-            htmx.ajax('GET', `/api/packages/${trackingNumber}/details`, {
-                target: '#package-details-content',
-                swap: 'innerHTML'
-            });
-        },
-        
-        closeModal() {
-            document.getElementById('details-modal').style.display = 'none';
-        }
-    }
+// Global function to open receive modal
+function openReceiveModal(package) {
+    Alpine.store('receiveModal').openModal(package);
 }
 
-// Global functions for Alpine.js
-window.receivePackage = function(trackingNumber) {
-    Alpine.store('receiveModal').openModal(trackingNumber);
-}
-
-window.viewDetails = function(trackingNumber) {
-    Alpine.store('detailsModal').openModal(trackingNumber);
-}
-
-window.applyFilters = function() {
-    const search = document.querySelector('input[name="search"]').value;
-    const status = document.querySelector('select[name="status_filter"]').value;
-    const type = document.querySelector('select[name="type_filter"]').value;
-    
-    const params = new URLSearchParams();
-    if (search) params.append('search', search);
-    if (status !== 'all') params.append('status', status);
-    if (type !== 'all') params.append('type', type);
-    
-    const url = `/receive${params.toString() ? '?' + params.toString() : ''}`;
-    window.location.href = url;
-}
-
-// Initialize Alpine.js stores
+// Initialize Alpine store
 document.addEventListener('alpine:init', () => {
     Alpine.store('receiveModal', receiveModal());
-    Alpine.store('detailsModal', detailsModal());
 });
 
-// Setup HTMX handlers
-document.addEventListener('htmx:afterRequest', (event) => {
-    if (event.detail.xhr.status === 200) {
-        // Handle successful responses
-        const response = event.detail.xhr.response;
-        try {
-            const data = JSON.parse(response);
-            if (data.message) {
-                if (window.app && window.app.showSuccess) {
-                    window.app.showSuccess(data.message);
-                }
-            }
-        } catch (error) {
-            // Not JSON response, continue
-        }
-    }
+// Load initial data
+document.addEventListener('DOMContentLoaded', function() {
+    // Load packages list
+    htmx.trigger(document.querySelector('form'), 'submit');
+    
+    // Load statistics
+    htmx.ajax('GET', '/api/v1/packages/stats', {target: '#stats-container'});
 });
-
-// Auto-refresh every 30 seconds
-setInterval(() => {
-    if (!document.hidden) {
-        htmx.ajax('GET', window.location.href, {
-            target: '#packages-list',
-            swap: 'innerHTML'
-        });
-    }
-}, 30000);
 </script>
 {% endblock %}

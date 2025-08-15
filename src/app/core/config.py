@@ -8,7 +8,8 @@ usando Pydantic Settings para validación automática.
 
 import os
 from typing import Optional, List
-from pydantic import BaseSettings, validator, Field
+from pydantic_settings import BaseSettings
+from pydantic import field_validator, Field
 from pydantic.types import SecretStr
 
 
@@ -34,7 +35,8 @@ class Settings(BaseSettings):
         env="DATABASE_URL"
     )
     
-    @validator("DATABASE_URL")
+    @field_validator("DATABASE_URL")
+    @classmethod
     def validate_database_url(cls, v):
         if not v:
             raise ValueError("DATABASE_URL no puede estar vacío")
@@ -59,7 +61,8 @@ class Settings(BaseSettings):
         env="CORS_ORIGINS"
     )
     
-    @validator("CORS_ORIGINS", pre=True)
+    @field_validator("CORS_ORIGINS", mode='before')
+    @classmethod
     def parse_cors_origins(cls, v):
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]
@@ -138,7 +141,8 @@ class Settings(BaseSettings):
     )
     UPLOAD_DIR: str = Field(default="/app/uploads", env="UPLOAD_DIR")
     
-    @validator("ALLOWED_FILE_TYPES", pre=True)
+    @field_validator("ALLOWED_FILE_TYPES", mode='before')
+    @classmethod
     def parse_allowed_file_types(cls, v):
         if isinstance(v, str):
             return [file_type.strip() for file_type in v.split(",")]

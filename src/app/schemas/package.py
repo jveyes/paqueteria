@@ -225,12 +225,12 @@ class PackageTracking(BaseModel):
 class PackageBulkAction(BaseModel):
     """Esquema para acciones masivas en paquetes"""
     package_ids: List[int] = Field(..., description="IDs de paquetes")
-    action: str = Field(..., regex="^(receive|deliver|cancel|delete)$", description="Acción a realizar")
+    action: str = Field(..., pattern="^(receive|deliver|cancel|delete)$", description="Acción a realizar")
     notes: Optional[str] = Field(None, max_length=1000, description="Notas adicionales")
 
 class PackageExport(BaseModel):
     """Esquema para exportación de paquetes"""
-    format: str = Field(default="csv", regex="^(csv|excel|json)$", description="Formato de exportación")
+    format: str = Field(default="csv", pattern="^(csv|excel|json)$", description="Formato de exportación")
     include_files: bool = Field(default=False, description="Incluir información de archivos")
     include_notifications: bool = Field(default=False, description="Incluir información de notificaciones")
     date_from: Optional[datetime] = Field(None, description="Fecha desde")

@@ -10,10 +10,14 @@ import asyncio
 from unittest.mock import Mock, patch, AsyncMock
 from fastapi.testclient import TestClient
 
-from src.main import app
-from src.app.services.external.liwa_sms import LIWASMSService, LIWASMSMessage, LIWASMSResponse
-from src.app.services.external.aws_s3 import S3Service, S3FileInfo
-from src.app.services.external.email_service import EmailService, EmailMessage, EmailResponse
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from main import app
+from app.services.external.liwa_sms import LIWASMSService, LIWASMSMessage, LIWASMSResponse
+from app.services.external.aws_s3 import S3Service, S3FileInfo
+from app.services.external.email_service import EmailService, EmailMessage, EmailResponse
 
 client = TestClient(app)
 

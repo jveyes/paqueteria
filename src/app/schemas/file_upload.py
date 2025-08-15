@@ -125,11 +125,11 @@ class FileUploadStats(BaseModel):
 class FileUploadBulkAction(BaseModel):
     """Esquema para acciones masivas en archivos"""
     file_ids: List[int] = Field(..., description="IDs de archivos")
-    action: str = Field(..., regex="^(delete|restore|download)$", description="Acción a realizar")
+    action: str = Field(..., pattern="^(delete|restore|download)$", description="Acción a realizar")
 
 class FileUploadExport(BaseModel):
     """Esquema para exportación de archivos"""
-    format: str = Field(default="csv", regex="^(csv|excel|json)$", description="Formato de exportación")
+    format: str = Field(default="csv", pattern="^(csv|excel|json)$", description="Formato de exportación")
     include_content: bool = Field(default=False, description="Incluir contenido de archivos")
     date_from: Optional[datetime] = Field(None, description="Fecha desde")
     date_to: Optional[datetime] = Field(None, description="Fecha hasta")

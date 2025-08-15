@@ -1,5 +1,4 @@
 {% extends "layouts/base.html" %}
-{% from "components/form.html" import text_input, textarea, select, checkbox, radio_group, file_upload, form_group, form_actions %}
 
 {% block title %}Anunciar Paquete - Sistema de Paquetería{% endblock %}
 
@@ -10,222 +9,336 @@
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">Anunciar Paquete</h1>
-                <p class="mt-2 text-gray-600">Complete la información del paquete que desea anunciar</p>
+                <p class="mt-2 text-gray-600">Complete la información del paquete y del cliente</p>
             </div>
             <div class="flex items-center space-x-2">
-                <i class="fas fa-box text-blue-600 text-2xl"></i>
-            </div>
-        </div>
-    </div>
-
-    <!-- Progress Steps -->
-    <div class="mb-8">
-        <div class="flex items-center justify-center">
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center">
-                    <div class="bg-blue-600 text-white rounded-full h-8 w-8 flex items-center justify-center text-sm font-medium">
-                        1
-                    </div>
-                    <span class="ml-2 text-sm font-medium text-blue-600">Información del Cliente</span>
-                </div>
-                <div class="h-1 w-8 bg-gray-300"></div>
-                <div class="flex items-center">
-                    <div class="bg-gray-300 text-gray-500 rounded-full h-8 w-8 flex items-center justify-center text-sm font-medium">
-                        2
-                    </div>
-                    <span class="ml-2 text-sm font-medium text-gray-500">Información del Paquete</span>
-                </div>
-                <div class="h-1 w-8 bg-gray-300"></div>
-                <div class="flex items-center">
-                    <div class="bg-gray-300 text-gray-500 rounded-full h-8 w-8 flex items-center justify-center text-sm font-medium">
-                        3
-                    </div>
-                    <span class="ml-2 text-sm font-medium text-gray-500">Confirmación</span>
-                </div>
+                <i class="fas fa-plus text-primary-600 text-2xl"></i>
             </div>
         </div>
     </div>
 
     <!-- Form -->
-    <form hx-post="/packages/announce" 
-          hx-encoding="multipart/form-data"
-          hx-target="#form-result"
-          hx-swap="innerHTML"
-          class="space-y-6"
-          x-data="announceForm()">
-        
-        <!-- Step 1: Customer Information -->
-        <div x-show="step === 1" x-transition>
-            {{ form_group("Información del Cliente", "Complete los datos del cliente que anunciará el paquete") }}
-                {{ text_input("customer_phone", "Número de Teléfono", "+57 300 123 4567", "", true, "tel", "Ingrese el número de teléfono del cliente") }}
-                {{ text_input("customer_name", "Nombre Completo", "Juan Pérez", "", true, "text", "Nombre completo del cliente") }}
-                {{ text_input("customer_email", "Correo Electrónico", "juan.perez@email.com", "", false, "email", "Correo electrónico (opcional)") }}
-                {{ textarea("customer_address", "Dirección", "Calle 123 #45-67, Bogotá", "", false, 3, "Dirección completa del cliente") }}
-                {{ select("customer_city", "Ciudad", [
-                    ("bogota", "Bogotá"),
-                    ("medellin", "Medellín"),
-                    ("cali", "Cali"),
-                    ("barranquilla", "Barranquilla"),
-                    ("cartagena", "Cartagena"),
-                    ("otro", "Otra")
-                ], "", false, "Seleccione la ciudad") }}
-            {{ endform_group() }}
-        </div>
-
-        <!-- Step 2: Package Information -->
-        <div x-show="step === 2" x-transition>
-            {{ form_group("Información del Paquete", "Complete los detalles del paquete a anunciar") }}
-                {{ textarea("description", "Descripción del Paquete", "Describe el contenido del paquete...", "", true, 4, "Descripción detallada del contenido del paquete") }}
-                
-                {{ radio_group("package_type", "Tipo de Paquete", [
-                    ("normal", "Paquete Normal - $1,500 COP"),
-                    ("extra_dimensioned", "Paquete Extra Dimensionado - $2,000 COP")
-                ], "normal", true, "Seleccione el tipo de paquete según sus dimensiones") }}
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {{ text_input("weight_kg", "Peso (kg)", "2.5", "", false, "number", "Peso en kilogramos", "", "step=0.1 min=0") }}
-                    {{ text_input("length_cm", "Largo (cm)", "30", "", false, "number", "Largo en centímetros", "", "step=0.1 min=0") }}
-                    {{ text_input("width_cm", "Ancho (cm)", "20", "", false, "number", "Ancho en centímetros", "", "step=0.1 min=0") }}
-                    {{ text_input("height_cm", "Alto (cm)", "15", "", false, "number", "Alto en centímetros", "", "step=0.1 min=0") }}
-                </div>
-                
-                {{ checkbox("is_urgent", "Paquete Urgente", false, "Marque si el paquete requiere atención prioritaria") }}
-                
-                {{ textarea("customer_notes", "Notas Adicionales", "Información adicional sobre el paquete...", "", false, 3, "Notas o comentarios adicionales") }}
-            {{ endform_group() }}
+    <div class="bg-white shadow rounded-lg" x-data="announceForm()">
+        <form hx-post="/packages/announce" 
+              hx-target="#announce-result" 
+              hx-swap="innerHTML"
+              class="space-y-8 p-6">
             
-            {{ form_group("Archivos Adjuntos", "Subir imágenes o documentos relacionados con el paquete") }}
-                {{ file_upload("files", "Archivos", "image/*,.pdf", true, false, "Puede subir imágenes (JPG, PNG) o documentos (PDF). Máximo 10MB por archivo.") }}
-            {{ endform_group() }}
-        </div>
-
-        <!-- Step 3: Confirmation -->
-        <div x-show="step === 3" x-transition>
-            {{ form_group("Confirmación", "Revise la información antes de confirmar el anuncio") }}
-                <div class="bg-gray-50 rounded-lg p-6">
-                    <h4 class="text-lg font-medium text-gray-900 mb-4">Resumen del Anuncio</h4>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h5 class="font-medium text-gray-700 mb-2">Información del Cliente</h5>
-                            <div class="space-y-1 text-sm text-gray-600">
-                                <p><strong>Nombre:</strong> <span x-text="formData.customer_name"></span></p>
-                                <p><strong>Teléfono:</strong> <span x-text="formData.customer_phone"></span></p>
-                                <p><strong>Email:</strong> <span x-text="formData.customer_email || 'No especificado'"></span></p>
-                                <p><strong>Ciudad:</strong> <span x-text="getCityName(formData.customer_city)"></span></p>
+            <!-- Customer Information -->
+            <div class="border-b border-gray-200 pb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">
+                    <i class="fas fa-user text-primary-600 mr-2"></i>
+                    Información del Cliente
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Phone Number -->
+                    <div>
+                        <label for="customer_phone" class="block text-sm font-medium text-gray-700 mb-2">
+                            Teléfono <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-phone text-gray-400"></i>
                             </div>
+                            <input type="tel" 
+                                   id="customer_phone" 
+                                   name="customer_phone" 
+                                   required
+                                   x-model="form.customer_phone"
+                                   @input="validatePhone"
+                                   class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                   placeholder="+57 300 123 4567">
                         </div>
-                        
-                        <div>
-                            <h5 class="font-medium text-gray-700 mb-2">Información del Paquete</h5>
-                            <div class="space-y-1 text-sm text-gray-600">
-                                <p><strong>Tipo:</strong> <span x-text="getPackageTypeName(formData.package_type)"></span></p>
-                                <p><strong>Costo Base:</strong> <span x-text="getPackageCost(formData.package_type)"></span></p>
-                                <p><strong>Urgente:</strong> <span x-text="formData.is_urgent ? 'Sí' : 'No'"></span></p>
-                                <p><strong>Dimensiones:</strong> <span x-text="getDimensions()"></span></p>
+                        <p x-show="errors.phone" x-text="errors.phone" class="mt-1 text-sm text-red-600"></p>
+                    </div>
+                    
+                    <!-- Name -->
+                    <div>
+                        <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-2">
+                            Nombre Completo <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user text-gray-400"></i>
+                            </div>
+                            <input type="text" 
+                                   id="customer_name" 
+                                   name="customer_name" 
+                                   required
+                                   x-model="form.customer_name"
+                                   class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                   placeholder="Juan Pérez">
+                        </div>
+                    </div>
+                    
+                    <!-- Email -->
+                    <div>
+                        <label for="customer_email" class="block text-sm font-medium text-gray-700 mb-2">
+                            Email
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-envelope text-gray-400"></i>
+                            </div>
+                            <input type="email" 
+                                   id="customer_email" 
+                                   name="customer_email" 
+                                   x-model="form.customer_email"
+                                   class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                   placeholder="juan@ejemplo.com">
+                        </div>
+                    </div>
+                    
+                    <!-- City -->
+                    <div>
+                        <label for="customer_city" class="block text-sm font-medium text-gray-700 mb-2">
+                            Ciudad
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-city text-gray-400"></i>
+                            </div>
+                            <input type="text" 
+                                   id="customer_city" 
+                                   name="customer_city" 
+                                   x-model="form.customer_city"
+                                   class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                   placeholder="Bogotá">
+                        </div>
+                    </div>
+                    
+                    <!-- Address -->
+                    <div class="md:col-span-2">
+                        <label for="customer_address" class="block text-sm font-medium text-gray-700 mb-2">
+                            Dirección
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-map-marker-alt text-gray-400"></i>
+                            </div>
+                            <input type="text" 
+                                   id="customer_address" 
+                                   name="customer_address" 
+                                   x-model="form.customer_address"
+                                   class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                   placeholder="Calle 123 # 45-67">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Package Information -->
+            <div class="border-b border-gray-200 pb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">
+                    <i class="fas fa-box text-primary-600 mr-2"></i>
+                    Información del Paquete
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Description -->
+                    <div class="md:col-span-2">
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                            Descripción del Paquete <span class="text-red-500">*</span>
+                        </label>
+                        <textarea id="description" 
+                                  name="description" 
+                                  required
+                                  x-model="form.description"
+                                  rows="3"
+                                  class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                  placeholder="Descripción detallada del contenido del paquete"></textarea>
+                    </div>
+                    
+                    <!-- Package Type -->
+                    <div>
+                        <label for="package_type" class="block text-sm font-medium text-gray-700 mb-2">
+                            Tipo de Paquete <span class="text-red-500">*</span>
+                        </label>
+                        <select id="package_type" 
+                                name="package_type" 
+                                required
+                                x-model="form.package_type"
+                                @change="updateCost"
+                                class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
+                            <option value="">Seleccione un tipo</option>
+                            <option value="normal">Paquete Normal ($1,500 COP)</option>
+                            <option value="extra_dimensioned">Paquete Extra Dimensionado ($2,000 COP)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Weight -->
+                    <div>
+                        <label for="weight_kg" class="block text-sm font-medium text-gray-700 mb-2">
+                            Peso (kg)
+                        </label>
+                        <div class="relative">
+                            <input type="number" 
+                                   id="weight_kg" 
+                                   name="weight_kg" 
+                                   step="0.1"
+                                   min="0"
+                                   x-model="form.weight_kg"
+                                   class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                   placeholder="2.5">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 text-sm">kg</span>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="mt-4">
-                        <h5 class="font-medium text-gray-700 mb-2">Descripción</h5>
-                        <p class="text-sm text-gray-600" x-text="formData.description"></p>
+                    <!-- Dimensions -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Dimensiones (cm)
+                        </label>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label for="length_cm" class="block text-xs text-gray-500 mb-1">Largo</label>
+                                <input type="number" 
+                                       id="length_cm" 
+                                       name="length_cm" 
+                                       step="0.1"
+                                       min="0"
+                                       x-model="form.length_cm"
+                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                       placeholder="30">
+                            </div>
+                            <div>
+                                <label for="width_cm" class="block text-xs text-gray-500 mb-1">Ancho</label>
+                                <input type="number" 
+                                       id="width_cm" 
+                                       name="width_cm" 
+                                       step="0.1"
+                                       min="0"
+                                       x-model="form.width_cm"
+                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                       placeholder="20">
+                            </div>
+                            <div>
+                                <label for="height_cm" class="block text-xs text-gray-500 mb-1">Alto</label>
+                                <input type="number" 
+                                       id="height_cm" 
+                                       name="height_cm" 
+                                       step="0.1"
+                                       min="0"
+                                       x-model="form.height_cm"
+                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                       placeholder="15">
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <!-- Urgent -->
+                    <div class="md:col-span-2">
                         <div class="flex items-center">
-                            <i class="fas fa-info-circle text-blue-600 mr-2"></i>
-                            <div class="text-sm text-blue-800">
-                                <p class="font-medium">Información Importante:</p>
-                                <ul class="mt-1 space-y-1">
-                                    <li>• El cliente recibirá un SMS con el número de tracking</li>
-                                    <li>• El paquete debe ser recogido en nuestras instalaciones</li>
-                                    <li>• Se aplicará costo de bodegaje después de 24 horas</li>
-                                    <li>• El paquete expirará en 30 días si no es reclamado</li>
-                                </ul>
-                            </div>
+                            <input type="checkbox" 
+                                   id="is_urgent" 
+                                   name="is_urgent" 
+                                   x-model="form.is_urgent"
+                                   class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                            <label for="is_urgent" class="ml-2 block text-sm text-gray-900">
+                                <i class="fas fa-exclamation-triangle text-yellow-500 mr-1"></i>
+                                Paquete Urgente (Prioridad alta)
+                            </label>
                         </div>
                     </div>
                 </div>
-            {{ endform_group() }}
-        </div>
-
-        <!-- Form Result -->
-        <div id="form-result"></div>
-
-        <!-- Navigation Buttons -->
-        <div class="flex justify-between pt-6 border-t border-gray-200">
-            <button type="button" 
-                    @click="previousStep()" 
-                    x-show="step > 1"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                <i class="fas fa-arrow-left mr-2"></i>
-                Anterior
-            </button>
+            </div>
             
-            <div class="flex space-x-3">
-                <button type="button" 
-                        @click="nextStep()" 
-                        x-show="step < 3"
-                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    Siguiente
-                    <i class="fas fa-arrow-right ml-2"></i>
-                </button>
+            <!-- Additional Information -->
+            <div class="border-b border-gray-200 pb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">
+                    <i class="fas fa-info-circle text-primary-600 mr-2"></i>
+                    Información Adicional
+                </h3>
                 
-                <button type="submit" 
-                        x-show="step === 3"
-                        class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                    <i class="fas fa-check mr-2"></i>
-                    Confirmar Anuncio
-                </button>
-            </div>
-        </div>
-    </form>
-</div>
-
-<!-- Success Modal -->
-<div id="success-modal" 
-     class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-     style="display: none;">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div class="mt-3 text-center">
-            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-                <i class="fas fa-check text-green-600 text-xl"></i>
-            </div>
-            <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">¡Paquete Anunciado Exitosamente!</h3>
-            <div class="mt-2 px-7 py-3">
-                <p class="text-sm text-gray-500">
-                    El paquete ha sido anunciado y el cliente recibirá una notificación SMS con el número de tracking.
-                </p>
-                <div class="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p class="text-sm font-medium text-gray-700">Número de Tracking:</p>
-                    <p class="text-lg font-bold text-blue-600" id="tracking-number"></p>
+                <div>
+                    <label for="customer_notes" class="block text-sm font-medium text-gray-700 mb-2">
+                        Notas Adicionales
+                    </label>
+                    <textarea id="customer_notes" 
+                              name="customer_notes" 
+                              x-model="form.customer_notes"
+                              rows="3"
+                              class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                              placeholder="Información adicional, instrucciones especiales, etc."></textarea>
                 </div>
             </div>
-            <div class="items-center px-4 py-3">
-                <button id="close-modal"
-                        class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    Continuar
+            
+            <!-- Cost Summary -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">
+                    <i class="fas fa-calculator text-primary-600 mr-2"></i>
+                    Resumen de Costos
+                </h3>
+                
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Costo del Paquete:</span>
+                        <span class="font-medium" x-text="formattedCost"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Bodegaje (después de 24h):</span>
+                        <span class="font-medium">$1,000 COP/día</span>
+                    </div>
+                    <hr class="my-2">
+                    <div class="flex justify-between text-lg font-semibold">
+                        <span>Total Estimado:</span>
+                        <span class="text-primary-600" x-text="formattedCost"></span>
+                    </div>
+                </div>
+                
+                <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <div class="flex">
+                        <i class="fas fa-info-circle text-yellow-600 mt-0.5 mr-2"></i>
+                        <div class="text-sm text-yellow-800">
+                            <p class="font-medium">Información Importante:</p>
+                            <ul class="mt-1 list-disc list-inside space-y-1">
+                                <li>El paquete debe ser recogido en nuestras instalaciones</li>
+                                <li>Se aplicará costo de bodegaje después de 24 horas</li>
+                                <li>El paquete expirará en 30 días si no es reclamado</li>
+                                <li>El cliente recibirá una notificación SMS con el número de tracking</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="flex justify-end space-x-4">
+                <button type="button" 
+                        @click="resetForm"
+                        class="px-6 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                    <i class="fas fa-undo mr-2"></i>
+                    Limpiar
+                </button>
+                <button type="submit" 
+                        :disabled="!isFormValid"
+                        class="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    Anunciar Paquete
                 </button>
             </div>
-        </div>
+        </form>
     </div>
+    
+    <!-- Result Container -->
+    <div id="announce-result" class="mt-6"></div>
 </div>
-{% endblock %}
 
-{% block scripts %}
+<!-- Alpine.js Component -->
 <script>
 function announceForm() {
     return {
-        step: 1,
-        formData: {
+        form: {
             customer_phone: '',
             customer_name: '',
             customer_email: '',
             customer_address: '',
             customer_city: '',
             description: '',
-            package_type: 'normal',
+            package_type: '',
             weight_kg: '',
             length_cm: '',
             width_cm: '',
@@ -233,139 +346,61 @@ function announceForm() {
             is_urgent: false,
             customer_notes: ''
         },
-        
-        init() {
-            this.loadFormData();
-            this.setupFormHandlers();
+        errors: {
+            phone: ''
         },
         
-        loadFormData() {
-            // Load from localStorage if available
-            const saved = localStorage.getItem('announceFormData');
-            if (saved) {
-                this.formData = { ...this.formData, ...JSON.parse(saved) };
-            }
-        },
-        
-        saveFormData() {
-            localStorage.setItem('announceFormData', JSON.stringify(this.formData));
-        },
-        
-        setupFormHandlers() {
-            // Auto-save form data on changes
-            this.$watch('formData', () => {
-                this.saveFormData();
-            }, { deep: true });
-            
-            // Handle form submission
-            document.addEventListener('htmx:afterRequest', (event) => {
-                if (event.detail.xhr.status === 200) {
-                    this.showSuccessModal(event.detail.xhr.response);
-                }
-            });
-        },
-        
-        nextStep() {
-            if (this.validateCurrentStep()) {
-                this.step++;
-                this.updateProgress();
-            }
-        },
-        
-        previousStep() {
-            this.step--;
-            this.updateProgress();
-        },
-        
-        validateCurrentStep() {
-            if (this.step === 1) {
-                if (!this.formData.customer_phone || !this.formData.customer_name) {
-                    this.showError('Por favor complete todos los campos requeridos');
-                    return false;
-                }
-            } else if (this.step === 2) {
-                if (!this.formData.description) {
-                    this.showError('Por favor complete la descripción del paquete');
-                    return false;
-                }
-            }
-            return true;
-        },
-        
-        updateProgress() {
-            // Update progress indicators
-            const steps = document.querySelectorAll('[data-step]');
-            steps.forEach((step, index) => {
-                if (index + 1 <= this.step) {
-                    step.classList.add('bg-blue-600', 'text-white');
-                    step.classList.remove('bg-gray-300', 'text-gray-500');
-                } else {
-                    step.classList.add('bg-gray-300', 'text-gray-500');
-                    step.classList.remove('bg-blue-600', 'text-white');
-                }
-            });
-        },
-        
-        getCityName(cityCode) {
-            const cities = {
-                'bogota': 'Bogotá',
-                'medellin': 'Medellín',
-                'cali': 'Cali',
-                'barranquilla': 'Barranquilla',
-                'cartagena': 'Cartagena',
-                'otro': 'Otra'
+        get formattedCost() {
+            const costs = {
+                'normal': 1500,
+                'extra_dimensioned': 2000
             };
-            return cities[cityCode] || cityCode;
+            return this.form.package_type ? `$${costs[this.form.package_type].toLocaleString()} COP` : '$0 COP';
         },
         
-        getPackageTypeName(type) {
-            return type === 'normal' ? 'Paquete Normal' : 'Paquete Extra Dimensionado';
+        get isFormValid() {
+            return this.form.customer_phone && 
+                   this.form.customer_name && 
+                   this.form.description && 
+                   this.form.package_type &&
+                   !this.errors.phone;
         },
         
-        getPackageCost(type) {
-            return type === 'normal' ? '$1,500 COP' : '$2,000 COP';
-        },
-        
-        getDimensions() {
-            const dims = [];
-            if (this.formData.length_cm) dims.push(`L: ${this.formData.length_cm}cm`);
-            if (this.formData.width_cm) dims.push(`A: ${this.formData.width_cm}cm`);
-            if (this.formData.height_cm) dims.push(`H: ${this.formData.height_cm}cm`);
-            return dims.length > 0 ? dims.join(' x ') : 'No especificadas';
-        },
-        
-        showSuccessModal(response) {
-            try {
-                const data = JSON.parse(response);
-                if (data.tracking_number) {
-                    document.getElementById('tracking-number').textContent = data.tracking_number;
-                    document.getElementById('success-modal').style.display = 'block';
-                    
-                    // Clear form data
-                    localStorage.removeItem('announceFormData');
-                }
-            } catch (error) {
-                console.error('Error parsing response:', error);
-            }
-        },
-        
-        showError(message) {
-            // Show error message using Alpine.js app function
-            if (window.app && window.app.showError) {
-                window.app.showError(message);
+        validatePhone() {
+            const phone = this.form.customer_phone;
+            const phoneRegex = /^(\+57\s?)?(3\d{2}|6\d{2}|9\d{1})\s?\d{3}\s?\d{4}$/;
+            
+            if (phone && !phoneRegex.test(phone)) {
+                this.errors.phone = 'Formato de teléfono inválido. Use: +57 300 123 4567';
             } else {
-                alert(message);
+                this.errors.phone = '';
             }
+        },
+        
+        updateCost() {
+            // Trigger reactivity
+            this.form.package_type = this.form.package_type;
+        },
+        
+        resetForm() {
+            this.form = {
+                customer_phone: '',
+                customer_name: '',
+                customer_email: '',
+                customer_address: '',
+                customer_city: '',
+                description: '',
+                package_type: '',
+                weight_kg: '',
+                length_cm: '',
+                width_cm: '',
+                height_cm: '',
+                is_urgent: false,
+                customer_notes: ''
+            };
+            this.errors.phone = '';
         }
     }
 }
-
-// Setup modal close handler
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('close-modal').addEventListener('click', function() {
-        document.getElementById('success-modal').style.display = 'none';
-        window.location.href = '/receive';
-    });
-});
 </script>
 {% endblock %}

@@ -207,12 +207,12 @@ class DeliveryReceipt(BaseModel):
 class DeliveryBulkAction(BaseModel):
     """Esquema para acciones masivas en entregas"""
     delivery_ids: List[int] = Field(..., description="IDs de entregas")
-    action: str = Field(..., regex="^(start|complete|cancel)$", description="Acción a realizar")
+    action: str = Field(..., pattern="^(start|complete|cancel)$", description="Acción a realizar")
     notes: Optional[str] = Field(None, max_length=1000, description="Notas adicionales")
 
 class DeliveryExport(BaseModel):
     """Esquema para exportación de entregas"""
-    format: str = Field(default="csv", regex="^(csv|excel|json|pdf)$", description="Formato de exportación")
+    format: str = Field(default="csv", pattern="^(csv|excel|json|pdf)$", description="Formato de exportación")
     include_receipts: bool = Field(default=False, description="Incluir recibos")
     date_from: Optional[datetime] = Field(None, description="Fecha desde")
     date_to: Optional[datetime] = Field(None, description="Fecha hasta")
