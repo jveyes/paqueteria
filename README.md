@@ -110,12 +110,18 @@ uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
 ### Configuración con Docker
 
-1. **Construir y ejecutar contenedores:**
+1. **Inicializar volúmenes externos (IMPORTANTE):**
+```bash
+# Ejecutar script de inicialización de volúmenes
+./scripts/init-volumes.sh
+```
+
+2. **Construir y ejecutar contenedores:**
 ```bash
 docker-compose up -d --build
 ```
 
-2. **Verificar estado:**
+3. **Verificar estado:**
 ```bash
 docker-compose ps
 docker-compose logs -f
@@ -268,13 +274,70 @@ La documentación automática de la API está disponible en:
 ## 📊 Monitoreo
 
 ### Logs
-- **Aplicación:** `/var/log/paqueteria/app.log`
-- **Nginx:** `/var/log/nginx/`
+- **Aplicación:** `./volumes/logs/`
+- **Nginx:** `./volumes/nginx/logs/`
+- **MySQL:** `./volumes/mysql/logs/`
+- **Redis:** `./volumes/redis/logs/`
 - **Docker:** `docker-compose logs -f`
 
 ### Métricas
 - **Health Check:** `/health`
 - **Prometheus:** `/metrics` (futuro)
+
+## 💾 Volúmenes Externos y Persistencia
+
+### Estructura de Volúmenes
+```
+volumes/
+├── mysql/           # Base de datos MySQL (CRÍTICO)
+├── redis/           # Cache Redis (CRÍTICO)
+├── uploads/         # Archivos subidos por usuarios (CRÍTICO)
+├── backups/         # Backups automáticos (CRÍTICO)
+├── logs/            # Logs de la aplicación
+├── config/          # Configuración de la aplicación
+├── ssl/             # Certificados SSL
+├── nginx/           # Configuración y logs de Nginx
+├── static/          # Archivos estáticos
+├── celery/          # Archivos temporales de Celery
+├── flower/          # Logs de Flower
+├── prometheus/      # Métricas de monitoreo
+└── grafana/         # Dashboards de Grafana
+```
+
+### Scripts de Gestión
+
+#### Inicialización de Volúmenes
+```bash
+# Crear estructura de volúmenes con permisos correctos
+./scripts/init-volumes.sh
+```
+
+#### Backup y Restauración
+```bash
+# Crear backup completo
+./scripts/backup-restore.sh backup
+
+# Listar backups disponibles
+./scripts/backup-restore.sh list
+
+# Restaurar desde backup
+./scripts/backup-restore.sh restore backups/paqueteria_backup_20250115_143022.tar.gz
+
+# Restaurar solo base de datos
+./scripts/backup-restore.sh restore-db backups/mysql_backup_20250115_143022.sql
+
+# Verificar integridad de backup
+./scripts/backup-restore.sh verify backups/paqueteria_backup_20250115_143022.tar.gz
+```
+
+### Ventajas de los Volúmenes Externos
+
+✅ **Persistencia de Datos:** Los datos sobreviven a reinicios de contenedores
+✅ **Fácil Backup:** Scripts automatizados para backup y restauración
+✅ **Recuperación Rápida:** Solo ejecutar `docker-compose down && docker-compose up -d`
+✅ **Seguridad:** Permisos configurados correctamente
+✅ **Monitoreo:** Logs separados por servicio
+✅ **Escalabilidad:** Fácil migración a otros servidores
 
 ## 🤝 Contribución
 

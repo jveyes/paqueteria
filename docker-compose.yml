@@ -18,9 +18,16 @@ services:
       - HOST=0.0.0.0
       - PORT=8000
     volumes:
-      - ./src:/app/src
-      - ./logs:/app/logs
-      - ./uploads:/app/uploads
+      # Código fuente (solo para desarrollo)
+      - ./src:/app/src:ro
+      # Logs persistentes
+      - paqueteria_logs:/app/logs
+      # Archivos subidos por usuarios
+      - paqueteria_uploads:/app/uploads
+      # Configuración de la aplicación
+      - paqueteria_config:/app/config
+      # Certificados SSL
+      - paqueteria_ssl:/app/ssl
     depends_on:
       - mysql
     networks:
@@ -47,9 +54,14 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./scripts/mysql.cnf:/etc/mysql/conf.d/custom.cnf
+      # Datos de la base de datos (CRÍTICO)
+      - paqueteria_mysql_data:/var/lib/mysql
+      # Logs de MySQL
+      - paqueteria_mysql_logs:/var/log/mysql
+      # Configuración de MySQL
+      - paqueteria_mysql_config:/etc/mysql/conf.d
+      # Scripts de inicialización
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - paqueteria-network
     healthcheck:
@@ -70,10 +82,15 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/ssl:/etc/nginx/ssl
-      - ./logs/nginx:/var/log/nginx
+      # Configuración de Nginx
+      - paqueteria_nginx_config:/etc/nginx/conf.d
+      - paqueteria_nginx_ssl:/etc/nginx/ssl
+      # Logs de Nginx
+      - paqueteria_nginx_logs:/var/log/nginx
+      # Archivos estáticos
+      - paqueteria_static:/var/www/static
+      # Certificados SSL
+      - paqueteria_ssl:/etc/nginx/ssl:ro
     depends_on:
       - fastapi
     networks:
@@ -110,8 +127,12 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
-      - ./scripts/redis.conf:/usr/local/etc/redis/redis.conf
+      # Datos de Redis (CRÍTICO)
+      - paqueteria_redis_data:/data
+      # Logs de Redis
+      - paqueteria_redis_logs:/var/log/redis
+      # Configuración de Redis
+      - paqueteria_redis_config:/usr/local/etc/redis
     command: redis-server /usr/local/etc/redis/redis.conf
     networks:
       - paqueteria-network
@@ -136,8 +157,12 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
     volumes:
-      - ./src:/app/src
-      - ./logs:/app/logs
+      # Código fuente (solo para desarrollo)
+      - ./src:/app/src:ro
+      # Logs persistentes
+      - paqueteria_logs:/app/logs
+      # Archivos temporales de Celery
+      - paqueteria_celery_temp:/app/temp
     depends_on:
       - mysql
       - redis
@@ -159,8 +184,12 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
     volumes:
-      - ./src:/app/src
-      - ./logs:/app/logs
+      # Código fuente (solo para desarrollo)
+      - ./src:/app/src:ro
+      # Logs persistentes
+      - paqueteria_logs:/app/logs
+      # Archivos temporales de Celery
+      - paqueteria_celery_temp:/app/temp
     depends_on:
       - mysql
       - redis
@@ -182,6 +211,9 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    volumes:
+      # Logs de Flower
+      - paqueteria_flower_logs:/app/logs
     depends_on:
       - redis
       - celery_worker
@@ -198,8 +230,12 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
+      # Configuración de Prometheus
+      - paqueteria_prometheus_config:/etc/prometheus
+      # Datos de métricas (CRÍTICO)
+      - paqueteria_prometheus_data:/prometheus
+      # Logs de Prometheus
+      - paqueteria_prometheus_logs:/var/log/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -222,26 +258,229 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      # Datos de Grafana (CRÍTICO)
+      - paqueteria_grafana_data:/var/lib/grafana
+      # Configuración de Grafana
+      - paqueteria_grafana_config:/etc/grafana/provisioning
+      # Logs de Grafana
+      - paqueteria_grafana_logs:/var/log/grafana
     depends_on:
       - prometheus
     networks:
       - paqueteria-network
 
+  # =============================================================================
+  # BACKUP SERVICE (Automated Backups)
+  # =============================================================================
+  backup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paqueteria-backup
+    restart: "no"
+    command: python -m src.app.services.backup_service
+    environment:
+      - DATABASE_URL=mysql+pymysql://paqueteria_user:paqueteria_pass@mysql:3306/paqueteria
+      - BACKUP_ENABLED=True
+    volumes:
+      # Backups de la base de datos
+      - paqueteria_backups:/app/backups
+      # Logs de backup
+      - paqueteria_logs:/app/logs
+    depends_on:
+      - mysql
+    networks:
+      - paqueteria-network
+    profiles:
+      - backup
+
 # =============================================================================
-# VOLUMES
+# VOLUMES EXTERNOS (PERSISTENTES)
 # =============================================================================
 volumes:
-  mysql_data:
+  # Base de datos MySQL (CRÍTICO)
+  paqueteria_mysql_data:
     driver: local
-  redis_data:
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/mysql/data
+  
+  # Logs de MySQL
+  paqueteria_mysql_logs:
     driver: local
-  prometheus_data:
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/mysql/logs
+  
+  # Configuración de MySQL
+  paqueteria_mysql_config:
     driver: local
-  grafana_data:
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/mysql/config
+  
+  # Datos de Redis (CRÍTICO)
+  paqueteria_redis_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/redis/data
+  
+  # Logs de Redis
+  paqueteria_redis_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/redis/logs
+  
+  # Configuración de Redis
+  paqueteria_redis_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/redis/config
+  
+  # Logs de la aplicación
+  paqueteria_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/logs
+  
+  # Archivos subidos por usuarios (CRÍTICO)
+  paqueteria_uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/uploads
+  
+  # Configuración de la aplicación
+  paqueteria_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/config
+  
+  # Certificados SSL
+  paqueteria_ssl:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/ssl
+  
+  # Configuración de Nginx
+  paqueteria_nginx_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/nginx/config
+  
+  # Logs de Nginx
+  paqueteria_nginx_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/nginx/logs
+  
+  # SSL de Nginx
+  paqueteria_nginx_ssl:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/nginx/ssl
+  
+  # Archivos estáticos
+  paqueteria_static:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/static
+  
+  # Archivos temporales de Celery
+  paqueteria_celery_temp:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/celery/temp
+  
+  # Logs de Flower
+  paqueteria_flower_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/flower/logs
+  
+  # Configuración de Prometheus
+  paqueteria_prometheus_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/prometheus/config
+  
+  # Datos de Prometheus (CRÍTICO)
+  paqueteria_prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/prometheus/data
+  
+  # Logs de Prometheus
+  paqueteria_prometheus_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/prometheus/logs
+  
+  # Datos de Grafana (CRÍTICO)
+  paqueteria_grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/grafana/data
+  
+  # Configuración de Grafana
+  paqueteria_grafana_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/grafana/config
+  
+  # Logs de Grafana
+  paqueteria_grafana_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/grafana/logs
+  
+  # Backups (CRÍTICO)
+  paqueteria_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./volumes/backups
 
 # =============================================================================
 # NETWORKS
