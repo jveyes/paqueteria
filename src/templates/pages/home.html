@@ -1,4 +1,5 @@
 {% extends "layouts/base.html" %}
+{% from "components/card.html" import stat_card, action_card, info_card %}
 
 {% block title %}Inicio - Sistema de Paquetería{% endblock %}
 
@@ -19,129 +20,56 @@
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-box text-blue-600 text-2xl"></i>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Total Paquetes</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ stats.total_packages }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-clock text-yellow-600 text-2xl"></i>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Pendientes</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ stats.pending_count }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-check-circle text-green-600 text-2xl"></i>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Entregados</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ stats.delivered_count }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-dollar-sign text-purple-600 text-2xl"></i>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Ingresos</dt>
-                            <dd class="text-lg font-medium text-gray-900">${{ "%.0f"|format(stats.total_revenue) }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
+        {{ stat_card(
+            "Total Paquetes",
+            stats.total_packages,
+            icon="fas fa-box text-blue-600"
+        ) }}
+        
+        {{ stat_card(
+            "Pendientes",
+            stats.pending_count,
+            icon="fas fa-clock text-yellow-600"
+        ) }}
+        
+        {{ stat_card(
+            "Entregados",
+            stats.delivered_count,
+            icon="fas fa-check-circle text-green-600"
+        ) }}
+        
+        {{ stat_card(
+            "Ingresos",
+            "$" + "%.0f"|format(stats.total_revenue),
+            icon="fas fa-dollar-sign text-purple-600"
+        ) }}
     </div>
 
     <!-- Quick Actions -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-plus text-blue-600 text-2xl"></i>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-medium text-gray-900">Anunciar Paquete</h3>
-                    <p class="text-sm text-gray-500">Crear un nuevo anuncio de paquete</p>
-                </div>
-            </div>
-            <div class="mt-4">
-                <a href="/announce" 
-                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <i class="fas fa-plus mr-2"></i>
-                    Anunciar
-                </a>
-            </div>
-        </div>
-
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-download text-green-600 text-2xl"></i>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-medium text-gray-900">Recibir Paquetes</h3>
-                    <p class="text-sm text-gray-500">Gestionar recepción de paquetes</p>
-                </div>
-            </div>
-            <div class="mt-4">
-                <a href="/receive" 
-                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                    <i class="fas fa-download mr-2"></i>
-                    Recibir
-                </a>
-            </div>
-        </div>
-
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-truck text-purple-600 text-2xl"></i>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-lg font-medium text-gray-900">Entregar Paquetes</h3>
-                    <p class="text-sm text-gray-500">Procesar entregas de paquetes</p>
-                </div>
-            </div>
-            <div class="mt-4">
-                <a href="/deliver" 
-                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
-                    <i class="fas fa-truck mr-2"></i>
-                    Entregar
-                </a>
-            </div>
-        </div>
+        {{ action_card(
+            "Anunciar Paquete",
+            "Crear un nuevo anuncio de paquete",
+            "Anunciar",
+            "/announce",
+            icon="fas fa-plus text-blue-600"
+        ) }}
+        
+        {{ action_card(
+            "Recibir Paquetes",
+            "Gestionar recepción de paquetes",
+            "Recibir",
+            "/receive",
+            icon="fas fa-download text-green-600"
+        ) }}
+        
+        {{ action_card(
+            "Entregar Paquetes",
+            "Procesar entregas de paquetes",
+            "Entregar",
+            "/deliver",
+            icon="fas fa-truck text-purple-600"
+        ) }}
     </div>
 
     <!-- Recent Activity -->

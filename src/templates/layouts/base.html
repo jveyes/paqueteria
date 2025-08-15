@@ -112,7 +112,7 @@
                 <!-- Logo and main nav -->
                 <div class="flex">
                     <div class="flex-shrink-0 flex items-center">
-                        <a href="/" class="flex items-center space-x-2">
+                        <a href="/" class="flex items-center space-x-2 hover:opacity-80 transition-opacity">
                             <i class="fas fa-box text-primary-600 text-2xl"></i>
                             <span class="text-xl font-bold text-gray-900">Paquetería</span>
                         </a>
@@ -121,28 +121,28 @@
                     <!-- Desktop navigation -->
                     <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
                         <a href="/" 
-                           class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                           class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">
                             <i class="fas fa-home mr-2"></i>
                             Inicio
                         </a>
                         <a href="/announce" 
-                           class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                           class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">
                             <i class="fas fa-plus mr-2"></i>
                             Anunciar
                         </a>
                         <a href="/receive" 
-                           class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                           class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">
                             <i class="fas fa-download mr-2"></i>
                             Recibir
                         </a>
                         <a href="/deliver" 
-                           class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                           class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">
                             <i class="fas fa-truck mr-2"></i>
                             Entregar
                         </a>
                         {% if current_user and current_user.is_superuser %}
                         <a href="/admin" 
-                           class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                           class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">
                             <i class="fas fa-cog mr-2"></i>
                             Admin
                         </a>

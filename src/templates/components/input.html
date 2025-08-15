@@ -1,0 +1,175 @@
+{% macro input_field(field_name, label, type="text", placeholder="", required=false, icon="", validation="", help_text="") %}
+<div class="space-y-1">
+    <label for="{{ field_name }}" class="block text-sm font-medium text-gray-700">
+        {{ label }}
+        {% if required %}
+            <span class="text-red-500">*</span>
+        {% endif %}
+    </label>
+    
+    <div class="relative">
+        {% if icon %}
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <i class="{{ icon }} text-gray-400"></i>
+        </div>
+        {% endif %}
+        
+        <input type="{{ type }}" 
+               id="{{ field_name }}" 
+               name="{{ field_name }}" 
+               {% if required %}required{% endif %}
+               placeholder="{{ placeholder }}"
+               class="{% if icon %}pl-10{% endif %} block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200
+                      {% if validation == 'error' %}border-red-300 focus:ring-red-500 focus:border-red-500{% endif %}
+                      {% if validation == 'success' %}border-green-300 focus:ring-green-500 focus:border-green-500{% endif %}"
+               x-data="{ 
+                   value: '', 
+                   isValid: false, 
+                   isTouched: false,
+                   validate() {
+                       this.isTouched = true;
+                       if (this.value.trim() === '') {
+                           this.isValid = false;
+                           return false;
+                       }
+                       this.isValid = true;
+                       return true;
+                   }
+               }"
+               x-model="value"
+               @blur="validate()"
+               @input="if (isTouched) validate()">
+        
+        <!-- Validation icons -->
+        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <i x-show="isTouched && isValid" 
+               class="fas fa-check text-green-500"></i>
+            <i x-show="isTouched && !isValid" 
+               class="fas fa-exclamation-triangle text-red-500"></i>
+        </div>
+    </div>
+    
+    {% if help_text %}
+    <p class="text-sm text-gray-500">{{ help_text }}</p>
+    {% endif %}
+    
+    <!-- Error message -->
+    <p x-show="isTouched && !isValid" 
+       x-text="'Este campo es requerido'"
+       class="text-sm text-red-600"></p>
+</div>
+{% endmacro %}
+
+{% macro textarea_field(field_name, label, placeholder="", required=false, rows=3, help_text="") %}
+<div class="space-y-1">
+    <label for="{{ field_name }}" class="block text-sm font-medium text-gray-700">
+        {{ label }}
+        {% if required %}
+            <span class="text-red-500">*</span>
+        {% endif %}
+    </label>
+    
+    <textarea id="{{ field_name }}" 
+              name="{{ field_name }}" 
+              rows="{{ rows }}"
+              {% if required %}required{% endif %}
+              placeholder="{{ placeholder }}"
+              class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+              x-data="{ 
+                  value: '', 
+                  isValid: false, 
+                  isTouched: false,
+                  validate() {
+                      this.isTouched = true;
+                      if (this.value.trim() === '') {
+                          this.isValid = false;
+                          return false;
+                      }
+                      this.isValid = true;
+                      return true;
+                  }
+              }"
+              x-model="value"
+              @blur="validate()"
+              @input="if (isTouched) validate()"></textarea>
+    
+    {% if help_text %}
+    <p class="text-sm text-gray-500">{{ help_text }}</p>
+    {% endif %}
+    
+    <!-- Error message -->
+    <p x-show="isTouched && !isValid" 
+       x-text="'Este campo es requerido'"
+       class="text-sm text-red-600"></p>
+</div>
+{% endmacro %}
+
+{% macro select_field(field_name, label, options, required=false, placeholder="Seleccionar...", help_text="") %}
+<div class="space-y-1">
+    <label for="{{ field_name }}" class="block text-sm font-medium text-gray-700">
+        {{ label }}
+        {% if required %}
+            <span class="text-red-500">*</span>
+        {% endif %}
+    </label>
+    
+    <select id="{{ field_name }}" 
+            name="{{ field_name }}" 
+            {% if required %}required{% endif %}
+            class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+            x-data="{ 
+                value: '', 
+                isValid: false, 
+                isTouched: false,
+                validate() {
+                    this.isTouched = true;
+                    if (this.value === '') {
+                        this.isValid = false;
+                        return false;
+                    }
+                    this.isValid = true;
+                    return true;
+                }
+            }"
+            x-model="value"
+            @change="validate()">
+        
+        <option value="">{{ placeholder }}</option>
+        {% for value, text in options %}
+        <option value="{{ value }}">{{ text }}</option>
+        {% endfor %}
+    </select>
+    
+    {% if help_text %}
+    <p class="text-sm text-gray-500">{{ help_text }}</p>
+    {% endif %}
+    
+    <!-- Error message -->
+    <p x-show="isTouched && !isValid" 
+       x-text="'Por favor seleccione una opción'"
+       class="text-sm text-red-600"></p>
+</div>
+{% endmacro %}
+
+{% macro checkbox_field(field_name, label, required=false, help_text="") %}
+<div class="flex items-start">
+    <div class="flex items-center h-5">
+        <input type="checkbox" 
+               id="{{ field_name }}" 
+               name="{{ field_name }}" 
+               {% if required %}required{% endif %}
+               class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded transition-colors duration-200">
+    </div>
+    <div class="ml-3 text-sm">
+        <label for="{{ field_name }}" class="font-medium text-gray-700">
+            {{ label }}
+            {% if required %}
+                <span class="text-red-500">*</span>
+            {% endif %}
+        </label>
+        {% if help_text %}
+        <p class="text-gray-500">{{ help_text }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}

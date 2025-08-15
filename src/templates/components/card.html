@@ -1,0 +1,131 @@
+{% macro card(title="", subtitle="", icon="", variant="default", classes="") %}
+{% set base_classes = "bg-white overflow-hidden shadow-sm rounded-lg border" %}
+
+{% set variant_classes = {
+    "default": "border-gray-200",
+    "primary": "border-primary-200 bg-primary-50",
+    "success": "border-green-200 bg-green-50",
+    "warning": "border-yellow-200 bg-yellow-50",
+    "danger": "border-red-200 bg-red-50",
+    "info": "border-blue-200 bg-blue-50"
+} %}
+
+<div class="{{ base_classes }} {{ variant_classes[variant] }} {{ classes }}">
+    {% if title or icon %}
+    <div class="px-4 py-3 border-b border-gray-200">
+        <div class="flex items-center">
+            {% if icon %}
+            <div class="flex-shrink-0">
+                <i class="{{ icon }} text-gray-400"></i>
+            </div>
+            {% endif %}
+            <div class="ml-3">
+                {% if title %}
+                <h3 class="text-sm font-medium text-gray-900">{{ title }}</h3>
+                {% endif %}
+                {% if subtitle %}
+                <p class="text-sm text-gray-500">{{ subtitle }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="px-4 py-4">
+        {{ caller() }}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro stat_card(title, value, icon="", trend="", trend_value="", classes="") %}
+<div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 {{ classes }}">
+    <div class="p-5">
+        <div class="flex items-center">
+            {% if icon %}
+            <div class="flex-shrink-0">
+                <i class="{{ icon }} text-gray-400 text-2xl"></i>
+            </div>
+            {% endif %}
+            <div class="ml-5 w-0 flex-1">
+                <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">{{ title }}</dt>
+                    <dd class="text-lg font-medium text-gray-900">{{ value }}</dd>
+                    {% if trend and trend_value %}
+                    <dd class="text-sm text-gray-500">
+                        <span class="flex items-center">
+                            {% if trend == "up" %}
+                            <i class="fas fa-arrow-up text-green-500 mr-1"></i>
+                            {% elif trend == "down" %}
+                            <i class="fas fa-arrow-down text-red-500 mr-1"></i>
+                            {% endif %}
+                            {{ trend_value }}
+                        </span>
+                    </dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro info_card(title, content, icon="", variant="info", classes="") %}
+{% set base_classes = "rounded-md p-4 border-l-4" %}
+
+{% set variant_classes = {
+    "info": "bg-blue-50 border-blue-400",
+    "success": "bg-green-50 border-green-400",
+    "warning": "bg-yellow-50 border-yellow-400",
+    "danger": "bg-red-50 border-red-400"
+} %}
+
+{% set icon_classes = {
+    "info": "text-blue-400",
+    "success": "text-green-400",
+    "warning": "text-yellow-400",
+    "danger": "text-red-400"
+} %}
+
+<div class="{{ base_classes }} {{ variant_classes[variant] }} {{ classes }}">
+    <div class="flex">
+        {% if icon %}
+        <div class="flex-shrink-0">
+            <i class="{{ icon }} {{ icon_classes[variant] }}"></i>
+        </div>
+        {% endif %}
+        <div class="ml-3">
+            {% if title %}
+            <h3 class="text-sm font-medium text-gray-900">{{ title }}</h3>
+            {% endif %}
+            <div class="mt-2 text-sm text-gray-700">
+                {{ content }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro action_card(title, description, action_text, action_url, icon="", variant="primary", classes="") %}
+<div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200 {{ classes }}">
+    <div class="p-6">
+        <div class="flex items-center">
+            {% if icon %}
+            <div class="flex-shrink-0">
+                <i class="{{ icon }} text-gray-400 text-2xl"></i>
+            </div>
+            {% endif %}
+            <div class="ml-4 flex-1">
+                <h3 class="text-lg font-medium text-gray-900">{{ title }}</h3>
+                <p class="mt-1 text-sm text-gray-500">{{ description }}</p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <a href="{{ action_url }}" 
+               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200">
+                {{ action_text }}
+                <i class="fas fa-arrow-right ml-2"></i>
+            </a>
+        </div>
+    </div>
+</div>
+{% endmacro %}

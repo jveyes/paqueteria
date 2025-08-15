@@ -1,4 +1,6 @@
 {% extends "layouts/base.html" %}
+{% from "components/input.html" import input_field, textarea_field, select_field, checkbox_field %}
+{% from "components/button.html" import submit_button %}
 
 {% block title %}Anunciar Paquete - Sistema de Paquetería{% endblock %}
 
@@ -33,97 +35,54 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Phone Number -->
-                    <div>
-                        <label for="customer_phone" class="block text-sm font-medium text-gray-700 mb-2">
-                            Teléfono <span class="text-red-500">*</span>
-                        </label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-phone text-gray-400"></i>
-                            </div>
-                            <input type="tel" 
-                                   id="customer_phone" 
-                                   name="customer_phone" 
-                                   required
-                                   x-model="form.customer_phone"
-                                   @input="validatePhone"
-                                   class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                                   placeholder="+57 300 123 4567">
-                        </div>
-                        <p x-show="errors.phone" x-text="errors.phone" class="mt-1 text-sm text-red-600"></p>
-                    </div>
+                    {{ input_field(
+                        "customer_phone",
+                        "Teléfono",
+                        type="tel",
+                        placeholder="+57 300 123 4567",
+                        required=true,
+                        icon="fas fa-phone",
+                        help_text="Ingrese su número de teléfono para recibir notificaciones"
+                    ) }}
                     
                     <!-- Name -->
-                    <div>
-                        <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-2">
-                            Nombre Completo <span class="text-red-500">*</span>
-                        </label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-user text-gray-400"></i>
-                            </div>
-                            <input type="text" 
-                                   id="customer_name" 
-                                   name="customer_name" 
-                                   required
-                                   x-model="form.customer_name"
-                                   class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                                   placeholder="Juan Pérez">
-                        </div>
-                    </div>
+                    {{ input_field(
+                        "customer_name",
+                        "Nombre Completo",
+                        placeholder="Juan Pérez",
+                        required=true,
+                        icon="fas fa-user",
+                        help_text="Su nombre completo"
+                    ) }}
                     
                     <!-- Email -->
-                    <div>
-                        <label for="customer_email" class="block text-sm font-medium text-gray-700 mb-2">
-                            Email
-                        </label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-envelope text-gray-400"></i>
-                            </div>
-                            <input type="email" 
-                                   id="customer_email" 
-                                   name="customer_email" 
-                                   x-model="form.customer_email"
-                                   class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                                   placeholder="juan@ejemplo.com">
-                        </div>
-                    </div>
+                    {{ input_field(
+                        "customer_email",
+                        "Email",
+                        type="email",
+                        placeholder="juan@ejemplo.com",
+                        icon="fas fa-envelope",
+                        help_text="Opcional: para recibir notificaciones por email"
+                    ) }}
                     
                     <!-- City -->
-                    <div>
-                        <label for="customer_city" class="block text-sm font-medium text-gray-700 mb-2">
-                            Ciudad
-                        </label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-city text-gray-400"></i>
-                            </div>
-                            <input type="text" 
-                                   id="customer_city" 
-                                   name="customer_city" 
-                                   x-model="form.customer_city"
-                                   class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                                   placeholder="Bogotá">
-                        </div>
-                    </div>
+                    {{ input_field(
+                        "customer_city",
+                        "Ciudad",
+                        placeholder="Bogotá",
+                        icon="fas fa-city",
+                        help_text="Ciudad donde reside"
+                    ) }}
                     
                     <!-- Address -->
                     <div class="md:col-span-2">
-                        <label for="customer_address" class="block text-sm font-medium text-gray-700 mb-2">
-                            Dirección
-                        </label>
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-map-marker-alt text-gray-400"></i>
-                            </div>
-                            <input type="text" 
-                                   id="customer_address" 
-                                   name="customer_address" 
-                                   x-model="form.customer_address"
-                                   class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                                   placeholder="Calle 123 # 45-67">
-                        </div>
+                        {{ input_field(
+                            "customer_address",
+                            "Dirección",
+                            placeholder="Calle 123 # 45-67",
+                            icon="fas fa-map-marker-alt",
+                            help_text="Dirección completa"
+                        ) }}
                     </div>
                 </div>
             </div>
@@ -138,58 +97,43 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Description -->
                     <div class="md:col-span-2">
-                        <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
-                            Descripción del Paquete <span class="text-red-500">*</span>
-                        </label>
-                        <textarea id="description" 
-                                  name="description" 
-                                  required
-                                  x-model="form.description"
-                                  rows="3"
-                                  class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                                  placeholder="Descripción detallada del contenido del paquete"></textarea>
+                        {{ textarea_field(
+                            "description",
+                            "Descripción del Paquete",
+                            placeholder="Descripción detallada del contenido del paquete",
+                            required=true,
+                            rows=3,
+                            help_text="Describa el contenido del paquete para facilitar su identificación"
+                        ) }}
                     </div>
                     
                     <!-- Package Type -->
-                    <div>
-                        <label for="package_type" class="block text-sm font-medium text-gray-700 mb-2">
-                            Tipo de Paquete <span class="text-red-500">*</span>
-                        </label>
-                        <select id="package_type" 
-                                name="package_type" 
-                                required
-                                x-model="form.package_type"
-                                @change="updateCost"
-                                class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
-                            <option value="">Seleccione un tipo</option>
-                            <option value="normal">Paquete Normal ($1,500 COP)</option>
-                            <option value="extra_dimensioned">Paquete Extra Dimensionado ($2,000 COP)</option>
-                        </select>
-                    </div>
+                    {{ select_field(
+                        "package_type",
+                        "Tipo de Paquete",
+                        options=[
+                            ("normal", "Paquete Normal ($1,500 COP)"),
+                            ("extra_dimensioned", "Paquete Extra Dimensionado ($2,000 COP)")
+                        ],
+                        required=true,
+                        placeholder="Seleccione un tipo",
+                        help_text="El tipo determina el costo base del servicio"
+                    ) }}
                     
                     <!-- Weight -->
-                    <div>
-                        <label for="weight_kg" class="block text-sm font-medium text-gray-700 mb-2">
-                            Peso (kg)
-                        </label>
-                        <div class="relative">
-                            <input type="number" 
-                                   id="weight_kg" 
-                                   name="weight_kg" 
-                                   step="0.1"
-                                   min="0"
-                                   x-model="form.weight_kg"
-                                   class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                                   placeholder="2.5">
-                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                <span class="text-gray-500 text-sm">kg</span>
-                            </div>
-                        </div>
-                    </div>
+                    {{ input_field(
+                        "weight_kg",
+                        "Peso",
+                        type="number",
+                        placeholder="2.5",
+                        icon="fas fa-weight-hanging",
+                        help_text="Peso en kilogramos (opcional)"
+                    ) }}
                     
                     <!-- Dimensions -->
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-ruler-combined text-gray-400 mr-2"></i>
                             Dimensiones (cm)
                         </label>
                         <div class="grid grid-cols-3 gap-4">
@@ -201,7 +145,7 @@
                                        step="0.1"
                                        min="0"
                                        x-model="form.length_cm"
-                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
                                        placeholder="30">
                             </div>
                             <div>
@@ -212,7 +156,7 @@
                                        step="0.1"
                                        min="0"
                                        x-model="form.width_cm"
-                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
                                        placeholder="20">
                             </div>
                             <div>
@@ -223,25 +167,20 @@
                                        step="0.1"
                                        min="0"
                                        x-model="form.height_cm"
-                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
                                        placeholder="15">
                             </div>
                         </div>
+                        <p class="text-xs text-gray-500 mt-1">Las dimensiones son opcionales pero ayudan a determinar el tipo de paquete</p>
                     </div>
                     
                     <!-- Urgent -->
                     <div class="md:col-span-2">
-                        <div class="flex items-center">
-                            <input type="checkbox" 
-                                   id="is_urgent" 
-                                   name="is_urgent" 
-                                   x-model="form.is_urgent"
-                                   class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
-                            <label for="is_urgent" class="ml-2 block text-sm text-gray-900">
-                                <i class="fas fa-exclamation-triangle text-yellow-500 mr-1"></i>
-                                Paquete Urgente (Prioridad alta)
-                            </label>
-                        </div>
+                        {{ checkbox_field(
+                            "is_urgent",
+                            "Paquete Urgente (Prioridad alta)",
+                            help_text="Los paquetes urgentes tienen prioridad en el procesamiento"
+                        ) }}
                     </div>
                 </div>
             </div>
@@ -254,15 +193,13 @@
                 </h3>
                 
                 <div>
-                    <label for="customer_notes" class="block text-sm font-medium text-gray-700 mb-2">
-                        Notas Adicionales
-                    </label>
-                    <textarea id="customer_notes" 
-                              name="customer_notes" 
-                              x-model="form.customer_notes"
-                              rows="3"
-                              class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                              placeholder="Información adicional, instrucciones especiales, etc."></textarea>
+                    {{ textarea_field(
+                        "customer_notes",
+                        "Notas Adicionales",
+                        placeholder="Información adicional, instrucciones especiales, etc.",
+                        rows=3,
+                        help_text="Información adicional que considere importante"
+                    ) }}
                 </div>
             </div>
             
@@ -307,18 +244,20 @@
             
             <!-- Submit Button -->
             <div class="flex justify-end space-x-4">
-                <button type="button" 
-                        @click="resetForm"
-                        class="px-6 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                    <i class="fas fa-undo mr-2"></i>
-                    Limpiar
-                </button>
-                <button type="submit" 
-                        :disabled="!isFormValid"
-                        class="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fas fa-paper-plane mr-2"></i>
-                    Anunciar Paquete
-                </button>
+                {{ button(
+                    "Limpiar",
+                    type="button",
+                    variant="secondary",
+                    icon="fas fa-undo",
+                    classes=""
+                ) }}
+                {{ submit_button(
+                    "Anunciar Paquete",
+                    variant="primary",
+                    icon="fas fa-paper-plane",
+                    disabled="!isFormValid",
+                    classes=""
+                ) }}
             </div>
         </form>
     </div>
