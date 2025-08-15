@@ -26,7 +26,7 @@ from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.logging import setup_logging
-from app.routes import packages, notifications, files, admin, auth, customers, web
+from app.routes import packages, notifications, files, admin, auth, customers, web, external
 from app.utils.health_check import health_check_router
 
 # =============================================================================
@@ -151,6 +151,7 @@ app.include_router(notifications.router)
 app.include_router(files.router)
 app.include_router(admin.router)
 app.include_router(web.router)
+app.include_router(external.router)
 
 # =============================================================================
 # Manejo de errores

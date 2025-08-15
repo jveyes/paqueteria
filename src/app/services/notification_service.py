@@ -1,569 +1,499 @@
 """
 Notification Service
-===================
+==================
 
-Servicio para gestión de notificaciones con integración SMS.
+Servicio unificado de notificaciones que integra SMS, email y WhatsApp.
 """
 
+import asyncio
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
+from enum import Enum
+from pydantic import BaseModel, Field
+
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func, desc, asc
-import logging
-import requests
-import json
+from sqlalchemy import and_, or_
 
+from .external.liwa_sms import LIWASMSService, LIWASMSMessage, send_quick_sms
+from .external.email_service import EmailService, EmailMessage, send_quick_email
 from ..models.notification import Notification, NotificationType, NotificationStatus
-from ..models.customer import Customer
 from ..models.package import Package
-from ..schemas.notification import (
-    NotificationCreate, NotificationUpdate, NotificationSearch,
-    NotificationStats, NotificationBulkSend, NotificationRetry
-)
-from ..core.config import settings
+from ..models.customer import Customer
+from ..core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+
+class NotificationPriority(Enum):
+    """Prioridad de notificación"""
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+    URGENT = "urgent"
+
+class NotificationTemplate(Enum):
+    """Plantillas de notificación"""
+    PACKAGE_ANNOUNCED = "package_announced"
+    PACKAGE_RECEIVED = "package_received"
+    PACKAGE_DELIVERED = "package_delivered"
+    PACKAGE_EXPIRED = "package_expired"
+    STORAGE_WARNING = "storage_warning"
+    SYSTEM_ALERT = "system_alert"
+
+class NotificationRequest(BaseModel):
+    """Solicitud de notificación"""
+    customer_id: int = Field(..., description="ID del cliente")
+    package_id: Optional[int] = Field(None, description="ID del paquete")
+    notification_type: NotificationType = Field(..., description="Tipo de notificación")
+    template: NotificationTemplate = Field(..., description="Plantilla a usar")
+    priority: NotificationPriority = Field(NotificationPriority.NORMAL, description="Prioridad")
+    channels: List[str] = Field(default=["sms"], description="Canales de envío")
+    custom_message: Optional[str] = Field(None, description="Mensaje personalizado")
+    scheduled_time: Optional[datetime] = Field(None, description="Tiempo programado")
+    template_data: Dict[str, Any] = Field(default_factory=dict, description="Datos para la plantilla")
+
+class NotificationResult(BaseModel):
+    """Resultado de notificación"""
+    success: bool = Field(..., description="Si la notificación fue exitosa")
+    notification_id: Optional[int] = Field(None, description="ID de la notificación")
+    external_id: Optional[str] = Field(None, description="ID externo")
+    error_message: Optional[str] = Field(None, description="Mensaje de error")
+    channel: str = Field(..., description="Canal utilizado")
 
 class NotificationService:
-    """Servicio para gestión de notificaciones"""
+    """Servicio unificado de notificaciones"""
     
     def __init__(self, db: Session):
         self.db = db
+        self.sms_service = LIWASMSService()
+        self.email_service = EmailService()
     
-    def create_notification(self, notification_data: NotificationCreate) -> Notification:
+    def _get_template_message(self, template: NotificationTemplate, template_data: Dict[str, Any]) -> str:
         """
-        Crear una nueva notificación
+        Obtener mensaje de la plantilla
         
         Args:
-            notification_data: Datos de la notificación
+            template: Plantilla a usar
+            template_data: Datos para la plantilla
             
         Returns:
-            Notification: Notificación creada
+            str: Mensaje formateado
+        """
+        if template == NotificationTemplate.PACKAGE_ANNOUNCED:
+            tracking_number = template_data.get("tracking_number", "")
+            package_cost = template_data.get("package_cost", "")
+            return f"Su paquete ha sido anunciado. Tracking: {tracking_number}. Costo: {package_cost}. Recójalo en nuestras instalaciones."
+        
+        elif template == NotificationTemplate.PACKAGE_RECEIVED:
+            tracking_number = template_data.get("tracking_number", "")
+            return f"Su paquete ha sido recibido. Tracking: {tracking_number}. Está listo para entrega."
+        
+        elif template == NotificationTemplate.PACKAGE_DELIVERED:
+            tracking_number = template_data.get("tracking_number", "")
+            delivery_number = template_data.get("delivery_number", "")
+            amount_paid = template_data.get("amount_paid", "")
+            return f"Su paquete ha sido entregado. Tracking: {tracking_number}. Entrega: {delivery_number}. Pagado: {amount_paid}."
+        
+        elif template == NotificationTemplate.PACKAGE_EXPIRED:
+            tracking_number = template_data.get("tracking_number", "")
+            return f"Su paquete ha expirado. Tracking: {tracking_number}. Contacte nuestras oficinas."
+        
+        elif template == NotificationTemplate.STORAGE_WARNING:
+            tracking_number = template_data.get("tracking_number", "")
+            days_in_storage = template_data.get("days_in_storage", "")
+            return f"Su paquete lleva {days_in_storage} días en bodega. Tracking: {tracking_number}. Recójalo pronto."
+        
+        elif template == NotificationTemplate.SYSTEM_ALERT:
+            return template_data.get("message", "Alerta del sistema de paquetería.")
+        
+        else:
+            return template_data.get("custom_message", "Notificación del sistema de paquetería.")
+    
+    def _get_email_template(self, template: NotificationTemplate, template_data: Dict[str, Any]) -> EmailMessage:
+        """
+        Obtener plantilla de email
+        
+        Args:
+            template: Plantilla a usar
+            template_data: Datos para la plantilla
+            
+        Returns:
+            EmailMessage: Mensaje de email
+        """
+        customer_name = template_data.get("customer_name", "")
+        customer_email = template_data.get("customer_email", "")
+        tracking_number = template_data.get("tracking_number", "")
+        
+        if template == NotificationTemplate.PACKAGE_ANNOUNCED:
+            package_cost = template_data.get("package_cost", "")
+            return self.email_service.create_package_announcement_email(
+                customer_name, customer_email, tracking_number, package_cost
+            )
+        
+        elif template == NotificationTemplate.PACKAGE_RECEIVED:
+            return self.email_service.create_package_received_email(
+                customer_name, customer_email, tracking_number
+            )
+        
+        elif template == NotificationTemplate.PACKAGE_DELIVERED:
+            delivery_number = template_data.get("delivery_number", "")
+            amount_paid = template_data.get("amount_paid", "")
+            return self.email_service.create_package_delivered_email(
+                customer_name, customer_email, tracking_number, delivery_number, amount_paid
+            )
+        
+        else:
+            # Email genérico
+            subject = f"Notificación - {template.value.replace('_', ' ').title()}"
+            body = self._get_template_message(template, template_data)
+            return EmailMessage(
+                to_email=customer_email,
+                to_name=customer_name,
+                subject=subject,
+                body_text=body
+            )
+    
+    async def send_notification(self, request: NotificationRequest) -> List[NotificationResult]:
+        """
+        Enviar notificación
+        
+        Args:
+            request: Solicitud de notificación
+            
+        Returns:
+            List[NotificationResult]: Resultados por canal
+        """
+        results = []
+        
+        # Obtener cliente y paquete
+        customer = self.db.query(Customer).filter(Customer.id == request.customer_id).first()
+        if not customer:
+            logger.error(f"Cliente no encontrado: {request.customer_id}")
+            return [NotificationResult(
+                success=False,
+                error_message="Cliente no encontrado",
+                channel="unknown"
+            )]
+        
+        package = None
+        if request.package_id:
+            package = self.db.query(Package).filter(Package.id == request.package_id).first()
+        
+        # Preparar datos de plantilla
+        template_data = {
+            "customer_name": customer.full_name,
+            "customer_email": customer.email,
+            "customer_phone": customer.phone_number,
+            **request.template_data
+        }
+        
+        if package:
+            template_data.update({
+                "tracking_number": package.tracking_number,
+                "package_cost": package.formatted_cost,
+                "package_description": package.description
+            })
+        
+        # Enviar por cada canal solicitado
+        for channel in request.channels:
+            try:
+                if channel == "sms":
+                    result = await self._send_sms_notification(customer, request, template_data)
+                elif channel == "email":
+                    result = await self._send_email_notification(customer, request, template_data)
+                elif channel == "whatsapp":
+                    result = await self._send_whatsapp_notification(customer, request, template_data)
+                else:
+                    result = NotificationResult(
+                        success=False,
+                        error_message=f"Canal no soportado: {channel}",
+                        channel=channel
+                    )
+                
+                results.append(result)
+                
+            except Exception as e:
+                logger.error(f"Error enviando notificación por {channel}: {e}")
+                results.append(NotificationResult(
+                    success=False,
+                    error_message=str(e),
+                    channel=channel
+                ))
+        
+        return results
+    
+    async def _send_sms_notification(self, customer: Customer, request: NotificationRequest, template_data: Dict[str, Any]) -> NotificationResult:
+        """
+        Enviar notificación SMS
+        
+        Args:
+            customer: Cliente
+            request: Solicitud de notificación
+            template_data: Datos de plantilla
+            
+        Returns:
+            NotificationResult: Resultado del envío
         """
         try:
+            # Crear mensaje SMS
+            message = self._get_template_message(request.template, template_data)
+            if request.custom_message:
+                message = request.custom_message
+            
+            # Enviar SMS
+            async with self.sms_service as sms:
+                sms_message = LIWASMSMessage(
+                    phone_number=customer.phone_number,
+                    message=message,
+                    message_id=f"sms_{request.template.value}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                    scheduled_time=request.scheduled_time
+                )
+                
+                response = await sms.send_sms(sms_message)
+                
+                # Crear registro en base de datos
+                notification = Notification(
+                    notification_type=request.notification_type,
+                    status=NotificationStatus.SENT if response.success else NotificationStatus.FAILED,
+                    customer_id=customer.id,
+                    package_id=request.package_id,
+                    recipient=customer.phone_number,
+                    message=message,
+                    external_id=response.message_id,
+                    error_message=response.error_message if not response.success else None,
+                    sent_at=datetime.now() if response.success else None
+                )
+                
+                self.db.add(notification)
+                self.db.commit()
+                
+                return NotificationResult(
+                    success=response.success,
+                    notification_id=notification.id,
+                    external_id=response.message_id,
+                    error_message=response.error_message,
+                    channel="sms"
+                )
+                
+        except Exception as e:
+            logger.error(f"Error enviando SMS: {e}")
+            return NotificationResult(
+                success=False,
+                error_message=str(e),
+                channel="sms"
+            )
+    
+    async def _send_email_notification(self, customer: Customer, request: NotificationRequest, template_data: Dict[str, Any]) -> NotificationResult:
+        """
+        Enviar notificación por email
+        
+        Args:
+            customer: Cliente
+            request: Solicitud de notificación
+            template_data: Datos de plantilla
+            
+        Returns:
+            NotificationResult: Resultado del envío
+        """
+        try:
+            if not customer.email:
+                return NotificationResult(
+                    success=False,
+                    error_message="Cliente no tiene email registrado",
+                    channel="email"
+                )
+            
+            # Crear mensaje de email
+            email_message = self._get_email_template(request.template, template_data)
+            if request.custom_message:
+                email_message.body_text = request.custom_message
+                email_message.body_html = f"<p>{request.custom_message}</p>"
+            
+            # Enviar email
+            response = await self.email_service.send_email(email_message)
+            
+            # Crear registro en base de datos
             notification = Notification(
-                notification_type=notification_data.notification_type,
-                customer_id=notification_data.customer_id,
-                package_id=notification_data.package_id,
-                recipient=notification_data.recipient,
-                message=notification_data.message,
-                scheduled_at=notification_data.scheduled_at,
-                priority=notification_data.priority,
-                retry_count=notification_data.retry_count
+                notification_type=request.notification_type,
+                status=NotificationStatus.SENT if response.success else NotificationStatus.FAILED,
+                customer_id=customer.id,
+                package_id=request.package_id,
+                recipient=customer.email,
+                message=email_message.body_text or email_message.body_html or "",
+                external_id=response.message_id,
+                error_message=response.error_message if not response.success else None,
+                sent_at=datetime.now() if response.success else None
             )
             
             self.db.add(notification)
             self.db.commit()
-            self.db.refresh(notification)
             
-            logger.info(f"Notificación creada: {notification.id} - {notification.notification_type.value}")
-            return notification
-            
-        except Exception as e:
-            self.db.rollback()
-            logger.error(f"Error creando notificación: {e}")
-            raise
-    
-    def send_sms(self, phone_number: str, message: str, 
-                 package_id: Optional[int] = None, customer_id: Optional[int] = None) -> Notification:
-        """
-        Enviar SMS
-        
-        Args:
-            phone_number: Número de teléfono
-            message: Mensaje a enviar
-            package_id: ID del paquete (opcional)
-            customer_id: ID del cliente (opcional)
-            
-        Returns:
-            Notification: Notificación creada
-        """
-        try:
-            # Crear notificación
-            notification_data = NotificationCreate(
-                notification_type=NotificationType.SMS,
-                customer_id=customer_id,
-                package_id=package_id,
-                recipient=phone_number,
-                message=message,
-                priority=1
+            return NotificationResult(
+                success=response.success,
+                notification_id=notification.id,
+                external_id=response.message_id,
+                error_message=response.error_message,
+                channel="email"
             )
-            
-            notification = self.create_notification(notification_data)
-            
-            # Enviar SMS inmediatamente
-            success = self._send_sms_via_api(phone_number, message, notification)
-            
-            if success:
-                notification.mark_as_sent()
-            else:
-                notification.mark_as_failed("Error enviando SMS")
-            
-            self.db.commit()
-            self.db.refresh(notification)
-            
-            return notification
-            
-        except Exception as e:
-            logger.error(f"Error enviando SMS: {e}")
-            raise
-    
-    def send_email(self, email: str, subject: str, message: str,
-                   package_id: Optional[int] = None, customer_id: Optional[int] = None) -> Notification:
-        """
-        Enviar email
-        
-        Args:
-            email: Dirección de email
-            subject: Asunto del email
-            message: Contenido del email
-            package_id: ID del paquete (opcional)
-            customer_id: ID del cliente (opcional)
-            
-        Returns:
-            Notification: Notificación creada
-        """
-        try:
-            # Crear notificación
-            notification_data = NotificationCreate(
-                notification_type=NotificationType.EMAIL,
-                customer_id=customer_id,
-                package_id=package_id,
-                recipient=email,
-                message=f"Subject: {subject}\n\n{message}",
-                priority=2
-            )
-            
-            notification = self.create_notification(notification_data)
-            
-            # Enviar email inmediatamente
-            success = self._send_email_via_api(email, subject, message, notification)
-            
-            if success:
-                notification.mark_as_sent()
-            else:
-                notification.mark_as_failed("Error enviando email")
-            
-            self.db.commit()
-            self.db.refresh(notification)
-            
-            return notification
             
         except Exception as e:
             logger.error(f"Error enviando email: {e}")
-            raise
-    
-    def send_whatsapp(self, phone_number: str, message: str,
-                      package_id: Optional[int] = None, customer_id: Optional[int] = None) -> Notification:
-        """
-        Enviar WhatsApp
-        
-        Args:
-            phone_number: Número de teléfono
-            message: Mensaje a enviar
-            package_id: ID del paquete (opcional)
-            customer_id: ID del cliente (opcional)
-            
-        Returns:
-            Notification: Notificación creada
-        """
-        try:
-            # Crear notificación
-            notification_data = NotificationCreate(
-                notification_type=NotificationType.WHATSAPP,
-                customer_id=customer_id,
-                package_id=package_id,
-                recipient=phone_number,
-                message=message,
-                priority=1
+            return NotificationResult(
+                success=False,
+                error_message=str(e),
+                channel="email"
             )
-            
-            notification = self.create_notification(notification_data)
-            
-            # Enviar WhatsApp inmediatamente
-            success = self._send_whatsapp_via_api(phone_number, message, notification)
-            
-            if success:
-                notification.mark_as_sent()
-            else:
-                notification.mark_as_failed("Error enviando WhatsApp")
-            
-            self.db.commit()
-            self.db.refresh(notification)
-            
-            return notification
-            
-        except Exception as e:
-            logger.error(f"Error enviando WhatsApp: {e}")
-            raise
     
-    def get_notification_by_id(self, notification_id: int) -> Optional[Notification]:
-        """Obtener notificación por ID"""
-        return self.db.query(Notification).filter(Notification.id == notification_id).first()
-    
-    def search_notifications(self, search_params: NotificationSearch) -> Dict[str, Any]:
+    async def _send_whatsapp_notification(self, customer: Customer, request: NotificationRequest, template_data: Dict[str, Any]) -> NotificationResult:
         """
-        Buscar notificaciones con filtros
+        Enviar notificación por WhatsApp (placeholder)
         
         Args:
-            search_params: Parámetros de búsqueda
+            customer: Cliente
+            request: Solicitud de notificación
+            template_data: Datos de plantilla
             
         Returns:
-            Dict con notificaciones y metadatos de paginación
+            NotificationResult: Resultado del envío
         """
-        query = self.db.query(Notification)
+        # TODO: Implementar integración con WhatsApp Business API
+        logger.info(f"WhatsApp notificación para {customer.phone_number}: {self._get_template_message(request.template, template_data)}")
         
-        # Aplicar filtros
-        if search_params.notification_type:
-            query = query.filter(Notification.notification_type == search_params.notification_type)
-        
-        if search_params.status:
-            query = query.filter(Notification.status == search_params.status)
-        
-        if search_params.customer_id:
-            query = query.filter(Notification.customer_id == search_params.customer_id)
-        
-        if search_params.package_id:
-            query = query.filter(Notification.package_id == search_params.package_id)
-        
-        if search_params.recipient:
-            query = query.filter(Notification.recipient == search_params.recipient)
-        
-        if search_params.date_from:
-            query = query.filter(Notification.created_at >= search_params.date_from)
-        
-        if search_params.date_to:
-            query = query.filter(Notification.created_at <= search_params.date_to)
-        
-        # Contar total
-        total = query.count()
-        
-        # Aplicar paginación
-        offset = (search_params.page - 1) * search_params.per_page
-        notifications = query.offset(offset).limit(search_params.per_page).all()
-        
-        # Calcular páginas
-        total_pages = (total + search_params.per_page - 1) // search_params.per_page
-        
-        return {
-            "notifications": notifications,
-            "total": total,
-            "page": search_params.page,
-            "per_page": search_params.per_page,
-            "total_pages": total_pages
-        }
-    
-    def get_notification_stats(self) -> NotificationStats:
-        """Obtener estadísticas de notificaciones"""
-        today = datetime.utcnow().date()
-        week_ago = today - timedelta(days=7)
-        month_ago = today - timedelta(days=30)
-        
-        # Totales
-        total_notifications = self.db.query(Notification).count()
-        pending_count = self.db.query(Notification).filter(Notification.status == NotificationStatus.PENDING).count()
-        sent_count = self.db.query(Notification).filter(Notification.status == NotificationStatus.SENT).count()
-        delivered_count = self.db.query(Notification).filter(Notification.status == NotificationStatus.DELIVERED).count()
-        failed_count = self.db.query(Notification).filter(Notification.status == NotificationStatus.FAILED).count()
-        
-        # Notificaciones de hoy
-        notifications_today = self.db.query(Notification).filter(
-            func.date(Notification.created_at) == today
-        ).count()
-        
-        notifications_this_week = self.db.query(Notification).filter(
-            Notification.created_at >= week_ago
-        ).count()
-        
-        notifications_this_month = self.db.query(Notification).filter(
-            Notification.created_at >= month_ago
-        ).count()
-        
-        # Notificaciones por tipo
-        notifications_by_type = {}
-        for notification_type in NotificationType:
-            count = self.db.query(Notification).filter(Notification.notification_type == notification_type).count()
-            notifications_by_type[notification_type.value] = count
-        
-        # Notificaciones por estado
-        notifications_by_status = {}
-        for status in NotificationStatus:
-            count = self.db.query(Notification).filter(Notification.status == status).count()
-            notifications_by_status[status.value] = count
-        
-        # Tasa de éxito
-        success_rate = 0
-        if total_notifications > 0:
-            success_count = sent_count + delivered_count
-            success_rate = (success_count / total_notifications) * 100
-        
-        # Tiempo promedio de entrega
-        avg_delivery_time = self.db.query(
-            func.avg(func.extract('epoch', Notification.delivered_at - Notification.sent_at) / 60)
-        ).filter(
-            Notification.delivered_at.isnot(None)
-        ).scalar()
-        
-        return NotificationStats(
-            total_notifications=total_notifications,
-            pending_count=pending_count,
-            sent_count=sent_count,
-            delivered_count=delivered_count,
-            failed_count=failed_count,
-            notifications_today=notifications_today,
-            notifications_this_week=notifications_this_week,
-            notifications_this_month=notifications_this_month,
-            notifications_by_type=notifications_by_type,
-            notifications_by_status=notifications_by_status,
-            success_rate=success_rate,
-            average_delivery_time=float(avg_delivery_time) if avg_delivery_time else None
+        return NotificationResult(
+            success=True,
+            error_message="WhatsApp no implementado aún",
+            channel="whatsapp"
         )
     
-    def retry_failed_notification(self, notification_id: int, force: bool = False) -> bool:
+    async def send_package_announcement(self, package: Package) -> List[NotificationResult]:
         """
-        Reintentar notificación fallida
+        Enviar notificación de anuncio de paquete
         
         Args:
-            notification_id: ID de la notificación
-            force: Forzar reintento incluso si no cumple condiciones
+            package: Paquete anunciado
             
         Returns:
-            bool: True si el reintento fue exitoso
+            List[NotificationResult]: Resultados de notificación
         """
-        notification = self.get_notification_by_id(notification_id)
-        
-        if not notification:
-            return False
-        
-        if notification.status != NotificationStatus.FAILED:
-            raise ValueError("Solo se pueden reintentar notificaciones fallidas")
-        
-        if not force and not notification.can_retry():
-            raise ValueError("La notificación no puede ser reintentada")
-        
-        # Reintentar según el tipo
-        success = False
-        
-        if notification.notification_type == NotificationType.SMS:
-            success = self._send_sms_via_api(notification.recipient, notification.message, notification)
-        elif notification.notification_type == NotificationType.EMAIL:
-            # Extraer subject y message del email
-            lines = notification.message.split('\n', 1)
-            subject = lines[0].replace('Subject: ', '')
-            message = lines[1] if len(lines) > 1 else ''
-            success = self._send_email_via_api(notification.recipient, subject, message, notification)
-        elif notification.notification_type == NotificationType.WHATSAPP:
-            success = self._send_whatsapp_via_api(notification.recipient, notification.message, notification)
-        
-        if success:
-            notification.mark_as_sent()
-        else:
-            notification.mark_as_failed("Error en reintento")
-        
-        self.db.commit()
-        
-        return success
-    
-    def send_bulk_notifications(self, bulk_data: NotificationBulkSend) -> Dict[str, Any]:
-        """
-        Enviar notificaciones masivas
-        
-        Args:
-            bulk_data: Datos para envío masivo
-            
-        Returns:
-            Dict con resultados del envío masivo
-        """
-        results = {
-            'total': len(bulk_data.customer_ids),
-            'sent': 0,
-            'failed': 0,
-            'errors': []
-        }
-        
-        for customer_id in bulk_data.customer_ids:
-            try:
-                customer = self.db.query(Customer).filter(Customer.id == customer_id).first()
-                if not customer:
-                    results['failed'] += 1
-                    results['errors'].append(f"Cliente {customer_id} no encontrado")
-                    continue
-                
-                # Personalizar mensaje
-                message = bulk_data.message_template
-                if bulk_data.variables:
-                    for key, value in bulk_data.variables.items():
-                        message = message.replace(f"{{{key}}}", str(value))
-                
-                # Enviar según tipo
-                if bulk_data.notification_type == NotificationType.SMS:
-                    self.send_sms(customer.phone_number, message, customer_id=customer_id)
-                elif bulk_data.notification_type == NotificationType.EMAIL:
-                    self.send_email(customer.email, "Notificación", message, customer_id=customer_id)
-                elif bulk_data.notification_type == NotificationType.WHATSAPP:
-                    self.send_whatsapp(customer.phone_number, message, customer_id=customer_id)
-                
-                results['sent'] += 1
-                
-            except Exception as e:
-                results['failed'] += 1
-                results['errors'].append(f"Error enviando a cliente {customer_id}: {str(e)}")
-        
-        return results
-    
-    def _send_sms_via_api(self, phone_number: str, message: str, notification: Notification) -> bool:
-        """
-        Enviar SMS a través de LIWA API
-        
-        Args:
-            phone_number: Número de teléfono
-            message: Mensaje a enviar
-            notification: Objeto de notificación
-            
-        Returns:
-            bool: True si el envío fue exitoso
-        """
-        try:
-            if not settings.LIWA_API_KEY or not settings.LIWA_API_URL:
-                logger.warning("LIWA API no configurada")
-                return False
-            
-            # Preparar datos para LIWA API
-            payload = {
-                'api_key': settings.LIWA_API_KEY,
-                'to': phone_number,
-                'message': message,
-                'from': settings.LIWA_SENDER_ID or 'Paqueteria'
+        request = NotificationRequest(
+            customer_id=package.customer_id,
+            package_id=package.id,
+            notification_type=NotificationType.SMS,
+            template=NotificationTemplate.PACKAGE_ANNOUNCED,
+            priority=NotificationPriority.HIGH if package.is_urgent else NotificationPriority.NORMAL,
+            channels=["sms", "email"] if package.customer.email else ["sms"],
+            template_data={
+                "tracking_number": package.tracking_number,
+                "package_cost": package.formatted_cost
             }
-            
-            # Enviar request
-            response = requests.post(
-                settings.LIWA_API_URL,
-                json=payload,
-                headers={'Content-Type': 'application/json'},
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Verificar respuesta de LIWA
-                if data.get('success'):
-                    notification.external_id = data.get('message_id')
-                    notification.sent_at = datetime.utcnow()
-                    logger.info(f"SMS enviado exitosamente: {phone_number}")
-                    return True
-                else:
-                    error_msg = data.get('error', 'Error desconocido')
-                    logger.error(f"Error en LIWA API: {error_msg}")
-                    return False
-            else:
-                logger.error(f"Error HTTP en LIWA API: {response.status_code}")
-                return False
-                
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error de conexión con LIWA API: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Error inesperado enviando SMS: {e}")
-            return False
+        )
+        
+        return await self.send_notification(request)
     
-    def _send_email_via_api(self, email: str, subject: str, message: str, notification: Notification) -> bool:
+    async def send_package_received(self, package: Package) -> List[NotificationResult]:
         """
-        Enviar email a través de API externa
+        Enviar notificación de paquete recibido
         
         Args:
-            email: Dirección de email
-            subject: Asunto del email
-            message: Contenido del email
-            notification: Objeto de notificación
+            package: Paquete recibido
             
         Returns:
-            bool: True si el envío fue exitoso
+            List[NotificationResult]: Resultados de notificación
         """
-        try:
-            # Por ahora, simular envío exitoso
-            # En producción, integrar con servicio de email (SendGrid, Mailgun, etc.)
-            logger.info(f"Email simulado enviado a: {email}")
-            notification.sent_at = datetime.utcnow()
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error enviando email: {e}")
-            return False
+        request = NotificationRequest(
+            customer_id=package.customer_id,
+            package_id=package.id,
+            notification_type=NotificationType.SMS,
+            template=NotificationTemplate.PACKAGE_RECEIVED,
+            priority=NotificationPriority.NORMAL,
+            channels=["sms", "email"] if package.customer.email else ["sms"],
+            template_data={
+                "tracking_number": package.tracking_number
+            }
+        )
+        
+        return await self.send_notification(request)
     
-    def _send_whatsapp_via_api(self, phone_number: str, message: str, notification: Notification) -> bool:
+    async def send_package_delivered(self, package: Package, delivery_number: str, amount_paid: str) -> List[NotificationResult]:
         """
-        Enviar WhatsApp a través de API externa
+        Enviar notificación de paquete entregado
         
         Args:
-            phone_number: Número de teléfono
-            message: Mensaje a enviar
-            notification: Objeto de notificación
+            package: Paquete entregado
+            delivery_number: Número de entrega
+            amount_paid: Monto pagado
             
         Returns:
-            bool: True si el envío fue exitoso
+            List[NotificationResult]: Resultados de notificación
         """
-        try:
-            # Por ahora, simular envío exitoso
-            # En producción, integrar con WhatsApp Business API
-            logger.info(f"WhatsApp simulado enviado a: {phone_number}")
-            notification.sent_at = datetime.utcnow()
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error enviando WhatsApp: {e}")
-            return False
+        request = NotificationRequest(
+            customer_id=package.customer_id,
+            package_id=package.id,
+            notification_type=NotificationType.SMS,
+            template=NotificationTemplate.PACKAGE_DELIVERED,
+            priority=NotificationPriority.NORMAL,
+            channels=["sms", "email"] if package.customer.email else ["sms"],
+            template_data={
+                "tracking_number": package.tracking_number,
+                "delivery_number": delivery_number,
+                "amount_paid": amount_paid
+            }
+        )
+        
+        return await self.send_notification(request)
     
-    def process_scheduled_notifications(self) -> int:
+    async def send_storage_warning(self, package: Package, days_in_storage: int) -> List[NotificationResult]:
         """
-        Procesar notificaciones programadas
+        Enviar advertencia de bodegaje
+        
+        Args:
+            package: Paquete en bodega
+            days_in_storage: Días en bodega
+            
+        Returns:
+            List[NotificationResult]: Resultados de notificación
+        """
+        request = NotificationRequest(
+            customer_id=package.customer_id,
+            package_id=package.id,
+            notification_type=NotificationType.SMS,
+            template=NotificationTemplate.STORAGE_WARNING,
+            priority=NotificationPriority.HIGH,
+            channels=["sms", "email"] if package.customer.email else ["sms"],
+            template_data={
+                "tracking_number": package.tracking_number,
+                "days_in_storage": days_in_storage
+            }
+        )
+        
+        return await self.send_notification(request)
+    
+    def get_notification_stats(self) -> Dict[str, Any]:
+        """
+        Obtener estadísticas de notificaciones
         
         Returns:
-            int: Número de notificaciones procesadas
+            Dict[str, Any]: Estadísticas
         """
-        now = datetime.utcnow()
+        total_notifications = self.db.query(Notification).count()
+        sent_notifications = self.db.query(Notification).filter(
+            Notification.status == NotificationStatus.SENT
+        ).count()
+        failed_notifications = self.db.query(Notification).filter(
+            Notification.status == NotificationStatus.FAILED
+        ).count()
+        pending_notifications = self.db.query(Notification).filter(
+            Notification.status == NotificationStatus.PENDING
+        ).count()
         
-        # Obtener notificaciones programadas
-        scheduled_notifications = self.db.query(Notification).filter(
-            and_(
-                Notification.status == NotificationStatus.PENDING,
-                Notification.scheduled_at <= now
-            )
-        ).all()
+        success_rate = (sent_notifications / total_notifications * 100) if total_notifications > 0 else 0
         
-        processed = 0
-        for notification in scheduled_notifications:
-            try:
-                success = False
-                
-                if notification.notification_type == NotificationType.SMS:
-                    success = self._send_sms_via_api(notification.recipient, notification.message, notification)
-                elif notification.notification_type == NotificationType.EMAIL:
-                    lines = notification.message.split('\n', 1)
-                    subject = lines[0].replace('Subject: ', '')
-                    message = lines[1] if len(lines) > 1 else ''
-                    success = self._send_email_via_api(notification.recipient, subject, message, notification)
-                elif notification.notification_type == NotificationType.WHATSAPP:
-                    success = self._send_whatsapp_via_api(notification.recipient, notification.message, notification)
-                
-                if success:
-                    notification.mark_as_sent()
-                else:
-                    notification.mark_as_failed("Error procesando notificación programada")
-                
-                processed += 1
-                
-            except Exception as e:
-                logger.error(f"Error procesando notificación {notification.id}: {e}")
-                notification.mark_as_failed(str(e))
-        
-        self.db.commit()
-        
-        if processed > 0:
-            logger.info(f"Procesadas {processed} notificaciones programadas")
-        
-        return processed
+        return {
+            "total_notifications": total_notifications,
+            "sent_notifications": sent_notifications,
+            "failed_notifications": failed_notifications,
+            "pending_notifications": pending_notifications,
+            "success_rate": round(success_rate, 2)
+        }
     
     def cleanup_old_notifications(self, days: int = 90) -> int:
         """
@@ -575,15 +505,90 @@ class NotificationService:
         Returns:
             int: Número de notificaciones eliminadas
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now() - timedelta(days=days)
         
+        # Eliminar notificaciones antiguas que no sean fallidas
         deleted_count = self.db.query(Notification).filter(
-            Notification.created_at < cutoff_date
+            and_(
+                Notification.sent_at < cutoff_date,
+                Notification.status != NotificationStatus.FAILED
+            )
         ).delete()
         
         self.db.commit()
         
-        if deleted_count > 0:
-            logger.info(f"Eliminadas {deleted_count} notificaciones antiguas")
-        
+        logger.info(f"Eliminadas {deleted_count} notificaciones antiguas")
         return deleted_count
+    
+    async def process_scheduled_notifications(self) -> int:
+        """
+        Procesar notificaciones programadas
+        
+        Returns:
+            int: Número de notificaciones procesadas
+        """
+        # Obtener notificaciones programadas pendientes
+        pending_notifications = self.db.query(Notification).filter(
+            and_(
+                Notification.status == NotificationStatus.PENDING,
+                Notification.scheduled_time <= datetime.now()
+            )
+        ).all()
+        
+        processed_count = 0
+        
+        for notification in pending_notifications:
+            try:
+                # Reintentar envío
+                if notification.notification_type == NotificationType.SMS:
+                    # Reintentar SMS
+                    customer = self.db.query(Customer).filter(Customer.id == notification.customer_id).first()
+                    if customer:
+                        async with self.sms_service as sms:
+                            sms_message = LIWASMSMessage(
+                                phone_number=customer.phone_number,
+                                message=notification.message
+                            )
+                            response = await sms.send_sms(sms_message)
+                            
+                            if response.success:
+                                notification.status = NotificationStatus.SENT
+                                notification.sent_at = datetime.now()
+                                notification.external_id = response.message_id
+                                processed_count += 1
+                            else:
+                                notification.status = NotificationStatus.FAILED
+                                notification.error_message = response.error_message
+                
+                self.db.commit()
+                
+            except Exception as e:
+                logger.error(f"Error procesando notificación programada {notification.id}: {e}")
+                notification.status = NotificationStatus.FAILED
+                notification.error_message = str(e)
+                self.db.commit()
+        
+        return processed_count
+
+# Funciones de conveniencia
+async def send_package_notification(db: Session, package: Package, notification_type: str) -> List[NotificationResult]:
+    """
+    Función de conveniencia para enviar notificación de paquete
+    
+    Args:
+        db: Sesión de base de datos
+        package: Paquete
+        notification_type: Tipo de notificación
+        
+    Returns:
+        List[NotificationResult]: Resultados de notificación
+    """
+    service = NotificationService(db)
+    
+    if notification_type == "announced":
+        return await service.send_package_announcement(package)
+    elif notification_type == "received":
+        return await service.send_package_received(package)
+    else:
+        logger.error(f"Tipo de notificación no válido: {notification_type}")
+        return []
