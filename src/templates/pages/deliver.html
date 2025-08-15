@@ -1,0 +1,560 @@
+{% extends "layouts/base.html" %}
+{% from "components/form.html" import text_input, textarea, select, checkbox, search_input, pagination, radio_group %}
+
+{% block title %}Entregar Paquetes - Sistema de Paquetería{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Entregar Paquetes</h1>
+                <p class="mt-2 text-gray-600">Gestionar la entrega de paquetes recibidos</p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-truck text-blue-600 text-2xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-box text-blue-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Paquetes Recibidos</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.received_count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-clock text-yellow-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Pendientes de Entrega</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.pending_delivery_count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-dollar-sign text-green-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total a Cobrar</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.total_to_collect }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-calendar text-green-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Entregados Hoy</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.delivered_today }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+                {{ search_input("search", "Buscar por tracking, cliente...", search_query) }}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                {{ select("status_filter", "", [
+                    ("all", "Todos"),
+                    ("received", "Recibidos"),
+                    ("delivered", "Entregados"),
+                    ("urgent", "Urgentes")
+                ], status_filter) }}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                {{ select("type_filter", "", [
+                    ("all", "Todos"),
+                    ("normal", "Normal"),
+                    ("extra_dimensioned", "Extra Dimensionado")
+                ], type_filter) }}
+            </div>
+            
+            <div class="flex items-end">
+                <button type="button" 
+                        @click="applyFilters()"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-filter mr-2"></i>
+                    Filtrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Packages List -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        <ul class="divide-y divide-gray-200" id="packages-list">
+            {% for package in packages %}
+            <li class="package-item" 
+                data-tracking="{{ package.tracking_number }}"
+                data-status="{{ package.status.value }}"
+                data-type="{{ package.package_type.value }}"
+                data-urgent="{{ package.is_urgent|lower }}">
+                <div class="px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                                    <i class="fas fa-truck text-green-600"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="flex items-center">
+                                    <p class="text-sm font-medium text-gray-900">
+                                        {{ package.tracking_number }}
+                                        {% if package.is_urgent %}
+                                            <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>Urgente
+                                            </span>
+                                        {% endif %}
+                                        {% if package.days_in_storage > 0 %}
+                                            <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                <i class="fas fa-clock mr-1"></i>{{ package.days_in_storage }} días
+                                            </span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="mt-1 flex items-center text-sm text-gray-500">
+                                    <p class="truncate">{{ package.description }}</p>
+                                </div>
+                                <div class="mt-1 flex items-center text-sm text-gray-500">
+                                    <i class="fas fa-user mr-1"></i>
+                                    <span>{{ package.customer.full_name }}</span>
+                                    <span class="mx-2">•</span>
+                                    <i class="fas fa-phone mr-1"></i>
+                                    <span>{{ package.customer.formatted_phone }}</span>
+                                </div>
+                                {% if package.received_at %}
+                                <div class="mt-1 flex items-center text-sm text-gray-500">
+                                    <i class="fas fa-calendar mr-1"></i>
+                                    <span>Recibido: {{ package.received_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-4">
+                            <div class="text-right">
+                                <p class="text-sm font-medium text-gray-900">
+                                    {{ package.formatted_cost }}
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    Base: {{ package.base_cost_formatted }}
+                                </p>
+                                {% if package.storage_cost > 0 %}
+                                <p class="text-sm text-gray-500">
+                                    Bodegaje: {{ package.storage_cost_formatted }}
+                                </p>
+                                {% endif %}
+                                <p class="text-sm text-gray-500">
+                                    {{ package.get_package_type_display() }}
+                                </p>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2">
+                                {% if package.status.value == 'received' %}
+                                    <button type="button"
+                                            @click="startDelivery('{{ package.tracking_number }}')"
+                                            class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                        <i class="fas fa-truck mr-1"></i>
+                                        Entregar
+                                    </button>
+                                {% elif package.status.value == 'delivered' %}
+                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <i class="fas fa-check mr-1"></i>
+                                        Entregado
+                                    </span>
+                                {% endif %}
+                                
+                                <button type="button"
+                                        @click="viewDetails('{{ package.tracking_number }}')"
+                                        class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <i class="fas fa-eye mr-1"></i>
+                                    Ver
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            {% else %}
+            <li class="px-4 py-8 text-center">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-truck text-gray-400 text-4xl mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No hay paquetes</h3>
+                    <p class="text-gray-500">No se encontraron paquetes con los filtros aplicados.</p>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Pagination -->
+    {% if packages and packages|length > 0 %}
+        {{ pagination(page, total_pages, "/deliver") }}
+    {% endif %}
+</div>
+
+<!-- Delivery Modal -->
+<div id="delivery-modal" 
+     class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+     style="display: none;"
+     x-data="deliveryModal()">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Procesar Entrega</h3>
+                <button @click="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- Package Info -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="font-medium text-gray-900 mb-2">Información del Paquete</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p><strong>Tracking:</strong> <span x-text="selectedPackage"></span></p>
+                            <p><strong>Cliente:</strong> <span x-text="packageInfo.customer_name"></span></p>
+                            <p><strong>Teléfono:</strong> <span x-text="packageInfo.customer_phone"></span></p>
+                        </div>
+                        <div>
+                            <p><strong>Costo Total:</strong> <span x-text="packageInfo.total_cost"></span></p>
+                            <p><strong>Días en Bodegaje:</strong> <span x-text="packageInfo.days_in_storage"></span></p>
+                            <p><strong>Recibido:</strong> <span x-text="packageInfo.received_date"></span></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Delivery Form -->
+                <form @submit.prevent="processDelivery()" class="space-y-4">
+                    <!-- Recipient Information -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Nombre del Receptor <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" 
+                               x-model="deliveryData.recipient_name"
+                               required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Nombre completo del receptor">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Documento del Receptor
+                        </label>
+                        <input type="text" 
+                               x-model="deliveryData.recipient_id"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Cédula, pasaporte, etc.">
+                    </div>
+                    
+                    <!-- Payment Information -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Método de Pago <span class="text-red-500">*</span>
+                        </label>
+                        {{ radio_group("payment_method", "", [
+                            ("cash", "Efectivo"),
+                            ("card", "Tarjeta"),
+                            ("transfer", "Transferencia"),
+                            ("digital_wallet", "Billetera Digital")
+                        ], "cash", true) }}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Monto Recibido <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" 
+                               x-model="deliveryData.amount_paid"
+                               required
+                               min="0"
+                               step="100"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Monto en pesos colombianos">
+                        <p class="mt-1 text-sm text-gray-500">
+                            Costo total: <span x-text="packageInfo.total_cost"></span>
+                        </p>
+                        <p x-show="deliveryData.amount_paid > packageInfo.total_cost_value" class="mt-1 text-sm text-green-600">
+                            Cambio: <span x-text="getChange()"></span>
+                        </p>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Notas de Entrega
+                        </label>
+                        <textarea x-model="deliveryData.notes"
+                                  rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Notas adicionales sobre la entrega..."></textarea>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                        <button type="button"
+                                @click="closeModal()"
+                                class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Cancelar
+                        </button>
+                        <button type="submit"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <i class="fas fa-check mr-2"></i>
+                            Confirmar Entrega
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Package Details Modal -->
+<div id="details-modal" 
+     class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+     style="display: none;"
+     x-data="detailsModal()">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Detalles del Paquete</h3>
+                <button @click="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="package-details-content">
+                <!-- Content will be loaded via HTMX -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deliveryModal() {
+    return {
+        selectedPackage: '',
+        packageInfo: {
+            customer_name: '',
+            customer_phone: '',
+            total_cost: '',
+            total_cost_value: 0,
+            days_in_storage: 0,
+            received_date: ''
+        },
+        deliveryData: {
+            recipient_name: '',
+            recipient_id: '',
+            payment_method: 'cash',
+            amount_paid: 0,
+            notes: ''
+        },
+        
+        async openModal(trackingNumber) {
+            this.selectedPackage = trackingNumber;
+            this.resetForm();
+            
+            // Load package info
+            try {
+                const response = await fetch(`/api/packages/${trackingNumber}/info`);
+                if (response.ok) {
+                    const data = await response.json();
+                    this.packageInfo = {
+                        customer_name: data.customer_name,
+                        customer_phone: data.customer_phone,
+                        total_cost: data.total_cost,
+                        total_cost_value: data.total_cost_value,
+                        days_in_storage: data.days_in_storage,
+                        received_date: data.received_date
+                    };
+                    this.deliveryData.amount_paid = data.total_cost_value;
+                }
+            } catch (error) {
+                console.error('Error loading package info:', error);
+            }
+            
+            document.getElementById('delivery-modal').style.display = 'block';
+        },
+        
+        closeModal() {
+            document.getElementById('delivery-modal').style.display = 'none';
+        },
+        
+        resetForm() {
+            this.deliveryData = {
+                recipient_name: '',
+                recipient_id: '',
+                payment_method: 'cash',
+                amount_paid: 0,
+                notes: ''
+            };
+        },
+        
+        getChange() {
+            const change = this.deliveryData.amount_paid - this.packageInfo.total_cost_value;
+            return change > 0 ? `$${change.toLocaleString()} COP` : '$0 COP';
+        },
+        
+        async processDelivery() {
+            try {
+                const response = await fetch(`/api/packages/${this.selectedPackage}/deliver`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(this.deliveryData)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Show success message
+                    if (window.app && window.app.showSuccess) {
+                        window.app.showSuccess('Paquete entregado exitosamente');
+                    }
+                    
+                    // Close modal
+                    this.closeModal();
+                    
+                    // Reload the page to update the list
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    const error = await response.json();
+                    if (window.app && window.app.showError) {
+                        window.app.showError(error.detail || 'Error al procesar la entrega');
+                    }
+                }
+            } catch (error) {
+                if (window.app && window.app.showError) {
+                    window.app.showError('Error al procesar la entrega');
+                }
+            }
+        }
+    }
+}
+
+function detailsModal() {
+    return {
+        openModal(trackingNumber) {
+            document.getElementById('details-modal').style.display = 'block';
+            
+            // Load package details via HTMX
+            htmx.ajax('GET', `/api/packages/${trackingNumber}/details`, {
+                target: '#package-details-content',
+                swap: 'innerHTML'
+            });
+        },
+        
+        closeModal() {
+            document.getElementById('details-modal').style.display = 'none';
+        }
+    }
+}
+
+// Global functions for Alpine.js
+window.startDelivery = function(trackingNumber) {
+    Alpine.store('deliveryModal').openModal(trackingNumber);
+}
+
+window.viewDetails = function(trackingNumber) {
+    Alpine.store('detailsModal').openModal(trackingNumber);
+}
+
+window.applyFilters = function() {
+    const search = document.querySelector('input[name="search"]').value;
+    const status = document.querySelector('select[name="status_filter"]').value;
+    const type = document.querySelector('select[name="type_filter"]').value;
+    
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (status !== 'all') params.append('status', status);
+    if (type !== 'all') params.append('type', type);
+    
+    const url = `/deliver${params.toString() ? '?' + params.toString() : ''}`;
+    window.location.href = url;
+}
+
+// Initialize Alpine.js stores
+document.addEventListener('alpine:init', () => {
+    Alpine.store('deliveryModal', deliveryModal());
+    Alpine.store('detailsModal', detailsModal());
+});
+
+// Setup HTMX handlers
+document.addEventListener('htmx:afterRequest', (event) => {
+    if (event.detail.xhr.status === 200) {
+        // Handle successful responses
+        const response = event.detail.xhr.response;
+        try {
+            const data = JSON.parse(response);
+            if (data.message) {
+                if (window.app && window.app.showSuccess) {
+                    window.app.showSuccess(data.message);
+                }
+            }
+        } catch (error) {
+            // Not JSON response, continue
+        }
+    }
+});
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    if (!document.hidden) {
+        htmx.ajax('GET', window.location.href, {
+            target: '#packages-list',
+            swap: 'innerHTML'
+        });
+    }
+}, 30000);
+</script>
+{% endblock %}

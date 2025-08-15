@@ -1,0 +1,325 @@
+<!-- Form Components for Paqueteria System -->
+
+<!-- Text Input Component -->
+{% macro text_input(name, label, placeholder="", value="", required=false, type="text", help_text="", error="") %}
+<div class="mb-4">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700 mb-2">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <input type="{{ type }}" 
+           id="{{ name }}" 
+           name="{{ name }}" 
+           value="{{ value }}"
+           placeholder="{{ placeholder }}"
+           {% if required %}required{% endif %}
+           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {% if error %}border-red-500{% endif %}"
+           hx-target="#{{ name }}-error"
+           hx-swap="innerHTML">
+    {% if help_text %}
+        <p class="mt-1 text-sm text-gray-500">{{ help_text }}</p>
+    {% endif %}
+    {% if error %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600">{{ error }}</p>
+    {% else %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600"></p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<!-- Textarea Component -->
+{% macro textarea(name, label, placeholder="", value="", required=false, rows=4, help_text="", error="") %}
+<div class="mb-4">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700 mb-2">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <textarea id="{{ name }}" 
+              name="{{ name }}" 
+              rows="{{ rows }}"
+              placeholder="{{ placeholder }}"
+              {% if required %}required{% endif %}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {% if error %}border-red-500{% endif %}"
+              hx-target="#{{ name }}-error"
+              hx-swap="innerHTML">{{ value }}</textarea>
+    {% if help_text %}
+        <p class="mt-1 text-sm text-gray-500">{{ help_text }}</p>
+    {% endif %}
+    {% if error %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600">{{ error }}</p>
+    {% else %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600"></p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<!-- Select Component -->
+{% macro select(name, label, options, selected="", required=false, help_text="", error="") %}
+<div class="mb-4">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700 mb-2">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <select id="{{ name }}" 
+            name="{{ name }}"
+            {% if required %}required{% endif %}
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 {% if error %}border-red-500{% endif %}"
+            hx-target="#{{ name }}-error"
+            hx-swap="innerHTML">
+        <option value="">Seleccionar...</option>
+        {% for value, text in options %}
+            <option value="{{ value }}" {% if value == selected %}selected{% endif %}>{{ text }}</option>
+        {% endfor %}
+    </select>
+    {% if help_text %}
+        <p class="mt-1 text-sm text-gray-500">{{ help_text }}</p>
+    {% endif %}
+    {% if error %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600">{{ error }}</p>
+    {% else %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600"></p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<!-- Checkbox Component -->
+{% macro checkbox(name, label, checked=false, help_text="", error="") %}
+<div class="mb-4">
+    <div class="flex items-center">
+        <input type="checkbox" 
+               id="{{ name }}" 
+               name="{{ name }}"
+               {% if checked %}checked{% endif %}
+               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+               hx-target="#{{ name }}-error"
+               hx-swap="innerHTML">
+        <label for="{{ name }}" class="ml-2 block text-sm text-gray-700">
+            {{ label }}
+        </label>
+    </div>
+    {% if help_text %}
+        <p class="mt-1 text-sm text-gray-500">{{ help_text }}</p>
+    {% endif %}
+    {% if error %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600">{{ error }}</p>
+    {% else %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600"></p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<!-- Radio Group Component -->
+{% macro radio_group(name, label, options, selected="", required=false, help_text="", error="") %}
+<div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700 mb-2">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <div class="space-y-2">
+        {% for value, text in options %}
+            <div class="flex items-center">
+                <input type="radio" 
+                       id="{{ name }}_{{ value }}" 
+                       name="{{ name }}" 
+                       value="{{ value }}"
+                       {% if value == selected %}checked{% endif %}
+                       {% if required %}required{% endif %}
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                       hx-target="#{{ name }}-error"
+                       hx-swap="innerHTML">
+                <label for="{{ name }}_{{ value }}" class="ml-2 block text-sm text-gray-700">
+                    {{ text }}
+                </label>
+            </div>
+        {% endfor %}
+    </div>
+    {% if help_text %}
+        <p class="mt-1 text-sm text-gray-500">{{ help_text }}</p>
+    {% endif %}
+    {% if error %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600">{{ error }}</p>
+    {% else %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600"></p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<!-- File Upload Component -->
+{% macro file_upload(name, label, accept="", multiple=false, required=false, help_text="", error="") %}
+<div class="mb-4">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700 mb-2">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <div class="flex items-center justify-center w-full">
+        <label for="{{ name }}" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                <p class="mb-2 text-sm text-gray-500">
+                    <span class="font-semibold">Haz clic para subir</span> o arrastra y suelta
+                </p>
+                <p class="text-xs text-gray-500">PNG, JPG, PDF hasta 10MB</p>
+            </div>
+            <input id="{{ name }}" 
+                   name="{{ name }}"
+                   type="file" 
+                   accept="{{ accept }}"
+                   {% if multiple %}multiple{% endif %}
+                   {% if required %}required{% endif %}
+                   class="hidden"
+                   hx-post="/api/upload"
+                   hx-encoding="multipart/form-data"
+                   hx-target="#{{ name }}-preview"
+                   hx-swap="innerHTML">
+        </label>
+    </div>
+    <div id="{{ name }}-preview" class="mt-2"></div>
+    {% if help_text %}
+        <p class="mt-1 text-sm text-gray-500">{{ help_text }}</p>
+    {% endif %}
+    {% if error %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600">{{ error }}</p>
+    {% else %}
+        <p id="{{ name }}-error" class="mt-1 text-sm text-red-600"></p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<!-- Form Group Component -->
+{% macro form_group(title="", description="") %}
+<div class="bg-white shadow rounded-lg p-6 mb-6">
+    {% if title %}
+        <div class="mb-4">
+            <h3 class="text-lg font-medium text-gray-900">{{ title }}</h3>
+            {% if description %}
+                <p class="mt-1 text-sm text-gray-500">{{ description }}</p>
+            {% endif %}
+        </div>
+    {% endif %}
+    <div class="space-y-4">
+        {{ caller() }}
+    </div>
+</div>
+{% endmacro %}
+
+<!-- Button Component -->
+{% macro button(text, type="button", variant="primary", size="md", disabled=false, icon="", hx_post="", hx_target="") %}
+{% set base_classes = "inline-flex items-center justify-center font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors" %}
+{% set variant_classes = {
+    "primary": "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
+    "secondary": "bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500",
+    "success": "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500",
+    "danger": "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+    "warning": "bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500",
+    "outline": "border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-blue-500"
+} %}
+{% set size_classes = {
+    "sm": "px-3 py-1.5 text-sm",
+    "md": "px-4 py-2 text-sm",
+    "lg": "px-6 py-3 text-base"
+} %}
+
+<button type="{{ type }}"
+        {% if disabled %}disabled{% endif %}
+        {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
+        {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
+        class="{{ base_classes }} {{ variant_classes[variant] }} {{ size_classes[size] }} {% if disabled %}opacity-50 cursor-not-allowed{% endif %}">
+    {% if icon %}
+        <i class="fas fa-{{ icon }} mr-2"></i>
+    {% endif %}
+    {{ text }}
+</button>
+{% endmacro %}
+
+<!-- Submit Button Component -->
+{% macro submit_button(text="Guardar", variant="primary", size="md", icon="save") %}
+{{ button(text, "submit", variant, size, false, icon) }}
+{% endmacro %}
+
+<!-- Cancel Button Component -->
+{% macro cancel_button(text="Cancelar", href="#") %}
+<a href="{{ href }}" 
+   class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+    <i class="fas fa-times mr-2"></i>
+    {{ text }}
+</a>
+{% endmacro %}
+
+<!-- Form Actions Component -->
+{% macro form_actions(submit_text="Guardar", cancel_href="#", submit_icon="save") %}
+<div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+    {{ cancel_button("Cancelar", cancel_href) }}
+    {{ submit_button(submit_text, "primary", "md", submit_icon) }}
+</div>
+{% endmacro %}
+
+<!-- Search Input Component -->
+{% macro search_input(name="search", placeholder="Buscar...", value="") %}
+<div class="relative">
+    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <i class="fas fa-search text-gray-400"></i>
+    </div>
+    <input type="text" 
+           name="{{ name }}" 
+           value="{{ value }}"
+           placeholder="{{ placeholder }}"
+           class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+           hx-get="/api/search"
+           hx-trigger="keyup changed delay:500ms"
+           hx-target="#search-results"
+           hx-swap="innerHTML">
+</div>
+{% endmacro %}
+
+<!-- Pagination Component -->
+{% macro pagination(page, total_pages, base_url="/") %}
+{% if total_pages > 1 %}
+<nav class="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6">
+    <div class="flex flex-1 justify-between sm:hidden">
+        {% if page > 1 %}
+            <a href="{{ base_url }}?page={{ page - 1 }}" 
+               class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Anterior
+            </a>
+        {% endif %}
+        {% if page < total_pages %}
+            <a href="{{ base_url }}?page={{ page + 1 }}" 
+               class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Siguiente
+            </a>
+        {% endif %}
+    </div>
+    <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+        <div>
+            <p class="text-sm text-gray-700">
+                Mostrando página <span class="font-medium">{{ page }}</span> de <span class="font-medium">{{ total_pages }}</span>
+            </p>
+        </div>
+        <div>
+            <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                {% if page > 1 %}
+                    <a href="{{ base_url }}?page={{ page - 1 }}" 
+                       class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+                        <i class="fas fa-chevron-left h-5 w-5"></i>
+                    </a>
+                {% endif %}
+                
+                {% for p in range(max(1, page - 2), min(total_pages + 1, page + 3)) %}
+                    <a href="{{ base_url }}?page={{ p }}" 
+                       class="relative inline-flex items-center px-4 py-2 text-sm font-semibold {% if p == page %}bg-blue-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600{% else %}text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0{% endif %}">
+                        {{ p }}
+                    </a>
+                {% endfor %}
+                
+                {% if page < total_pages %}
+                    <a href="{{ base_url }}?page={{ page + 1 }}" 
+                       class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+                        <i class="fas fa-chevron-right h-5 w-5"></i>
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
+    </div>
+</nav>
+{% endif %}
+{% endmacro %}

@@ -1,0 +1,371 @@
+{% extends "layouts/base.html" %}
+{% from "components/form.html" import text_input, textarea, select, checkbox, radio_group, file_upload, form_group, form_actions %}
+
+{% block title %}Anunciar Paquete - Sistema de Paquetería{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Anunciar Paquete</h1>
+                <p class="mt-2 text-gray-600">Complete la información del paquete que desea anunciar</p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-box text-blue-600 text-2xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Steps -->
+    <div class="mb-8">
+        <div class="flex items-center justify-center">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center">
+                    <div class="bg-blue-600 text-white rounded-full h-8 w-8 flex items-center justify-center text-sm font-medium">
+                        1
+                    </div>
+                    <span class="ml-2 text-sm font-medium text-blue-600">Información del Cliente</span>
+                </div>
+                <div class="h-1 w-8 bg-gray-300"></div>
+                <div class="flex items-center">
+                    <div class="bg-gray-300 text-gray-500 rounded-full h-8 w-8 flex items-center justify-center text-sm font-medium">
+                        2
+                    </div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Información del Paquete</span>
+                </div>
+                <div class="h-1 w-8 bg-gray-300"></div>
+                <div class="flex items-center">
+                    <div class="bg-gray-300 text-gray-500 rounded-full h-8 w-8 flex items-center justify-center text-sm font-medium">
+                        3
+                    </div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Confirmación</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form hx-post="/packages/announce" 
+          hx-encoding="multipart/form-data"
+          hx-target="#form-result"
+          hx-swap="innerHTML"
+          class="space-y-6"
+          x-data="announceForm()">
+        
+        <!-- Step 1: Customer Information -->
+        <div x-show="step === 1" x-transition>
+            {{ form_group("Información del Cliente", "Complete los datos del cliente que anunciará el paquete") }}
+                {{ text_input("customer_phone", "Número de Teléfono", "+57 300 123 4567", "", true, "tel", "Ingrese el número de teléfono del cliente") }}
+                {{ text_input("customer_name", "Nombre Completo", "Juan Pérez", "", true, "text", "Nombre completo del cliente") }}
+                {{ text_input("customer_email", "Correo Electrónico", "juan.perez@email.com", "", false, "email", "Correo electrónico (opcional)") }}
+                {{ textarea("customer_address", "Dirección", "Calle 123 #45-67, Bogotá", "", false, 3, "Dirección completa del cliente") }}
+                {{ select("customer_city", "Ciudad", [
+                    ("bogota", "Bogotá"),
+                    ("medellin", "Medellín"),
+                    ("cali", "Cali"),
+                    ("barranquilla", "Barranquilla"),
+                    ("cartagena", "Cartagena"),
+                    ("otro", "Otra")
+                ], "", false, "Seleccione la ciudad") }}
+            {{ endform_group() }}
+        </div>
+
+        <!-- Step 2: Package Information -->
+        <div x-show="step === 2" x-transition>
+            {{ form_group("Información del Paquete", "Complete los detalles del paquete a anunciar") }}
+                {{ textarea("description", "Descripción del Paquete", "Describe el contenido del paquete...", "", true, 4, "Descripción detallada del contenido del paquete") }}
+                
+                {{ radio_group("package_type", "Tipo de Paquete", [
+                    ("normal", "Paquete Normal - $1,500 COP"),
+                    ("extra_dimensioned", "Paquete Extra Dimensionado - $2,000 COP")
+                ], "normal", true, "Seleccione el tipo de paquete según sus dimensiones") }}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {{ text_input("weight_kg", "Peso (kg)", "2.5", "", false, "number", "Peso en kilogramos", "", "step=0.1 min=0") }}
+                    {{ text_input("length_cm", "Largo (cm)", "30", "", false, "number", "Largo en centímetros", "", "step=0.1 min=0") }}
+                    {{ text_input("width_cm", "Ancho (cm)", "20", "", false, "number", "Ancho en centímetros", "", "step=0.1 min=0") }}
+                    {{ text_input("height_cm", "Alto (cm)", "15", "", false, "number", "Alto en centímetros", "", "step=0.1 min=0") }}
+                </div>
+                
+                {{ checkbox("is_urgent", "Paquete Urgente", false, "Marque si el paquete requiere atención prioritaria") }}
+                
+                {{ textarea("customer_notes", "Notas Adicionales", "Información adicional sobre el paquete...", "", false, 3, "Notas o comentarios adicionales") }}
+            {{ endform_group() }}
+            
+            {{ form_group("Archivos Adjuntos", "Subir imágenes o documentos relacionados con el paquete") }}
+                {{ file_upload("files", "Archivos", "image/*,.pdf", true, false, "Puede subir imágenes (JPG, PNG) o documentos (PDF). Máximo 10MB por archivo.") }}
+            {{ endform_group() }}
+        </div>
+
+        <!-- Step 3: Confirmation -->
+        <div x-show="step === 3" x-transition>
+            {{ form_group("Confirmación", "Revise la información antes de confirmar el anuncio") }}
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-lg font-medium text-gray-900 mb-4">Resumen del Anuncio</h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h5 class="font-medium text-gray-700 mb-2">Información del Cliente</h5>
+                            <div class="space-y-1 text-sm text-gray-600">
+                                <p><strong>Nombre:</strong> <span x-text="formData.customer_name"></span></p>
+                                <p><strong>Teléfono:</strong> <span x-text="formData.customer_phone"></span></p>
+                                <p><strong>Email:</strong> <span x-text="formData.customer_email || 'No especificado'"></span></p>
+                                <p><strong>Ciudad:</strong> <span x-text="getCityName(formData.customer_city)"></span></p>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h5 class="font-medium text-gray-700 mb-2">Información del Paquete</h5>
+                            <div class="space-y-1 text-sm text-gray-600">
+                                <p><strong>Tipo:</strong> <span x-text="getPackageTypeName(formData.package_type)"></span></p>
+                                <p><strong>Costo Base:</strong> <span x-text="getPackageCost(formData.package_type)"></span></p>
+                                <p><strong>Urgente:</strong> <span x-text="formData.is_urgent ? 'Sí' : 'No'"></span></p>
+                                <p><strong>Dimensiones:</strong> <span x-text="getDimensions()"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h5 class="font-medium text-gray-700 mb-2">Descripción</h5>
+                        <p class="text-sm text-gray-600" x-text="formData.description"></p>
+                    </div>
+                    
+                    <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                            <div class="text-sm text-blue-800">
+                                <p class="font-medium">Información Importante:</p>
+                                <ul class="mt-1 space-y-1">
+                                    <li>• El cliente recibirá un SMS con el número de tracking</li>
+                                    <li>• El paquete debe ser recogido en nuestras instalaciones</li>
+                                    <li>• Se aplicará costo de bodegaje después de 24 horas</li>
+                                    <li>• El paquete expirará en 30 días si no es reclamado</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {{ endform_group() }}
+        </div>
+
+        <!-- Form Result -->
+        <div id="form-result"></div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex justify-between pt-6 border-t border-gray-200">
+            <button type="button" 
+                    @click="previousStep()" 
+                    x-show="step > 1"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Anterior
+            </button>
+            
+            <div class="flex space-x-3">
+                <button type="button" 
+                        @click="nextStep()" 
+                        x-show="step < 3"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Siguiente
+                    <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+                
+                <button type="submit" 
+                        x-show="step === 3"
+                        class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    <i class="fas fa-check mr-2"></i>
+                    Confirmar Anuncio
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Success Modal -->
+<div id="success-modal" 
+     class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+     style="display: none;">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                <i class="fas fa-check text-green-600 text-xl"></i>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">¡Paquete Anunciado Exitosamente!</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500">
+                    El paquete ha sido anunciado y el cliente recibirá una notificación SMS con el número de tracking.
+                </p>
+                <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <p class="text-sm font-medium text-gray-700">Número de Tracking:</p>
+                    <p class="text-lg font-bold text-blue-600" id="tracking-number"></p>
+                </div>
+            </div>
+            <div class="items-center px-4 py-3">
+                <button id="close-modal"
+                        class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function announceForm() {
+    return {
+        step: 1,
+        formData: {
+            customer_phone: '',
+            customer_name: '',
+            customer_email: '',
+            customer_address: '',
+            customer_city: '',
+            description: '',
+            package_type: 'normal',
+            weight_kg: '',
+            length_cm: '',
+            width_cm: '',
+            height_cm: '',
+            is_urgent: false,
+            customer_notes: ''
+        },
+        
+        init() {
+            this.loadFormData();
+            this.setupFormHandlers();
+        },
+        
+        loadFormData() {
+            // Load from localStorage if available
+            const saved = localStorage.getItem('announceFormData');
+            if (saved) {
+                this.formData = { ...this.formData, ...JSON.parse(saved) };
+            }
+        },
+        
+        saveFormData() {
+            localStorage.setItem('announceFormData', JSON.stringify(this.formData));
+        },
+        
+        setupFormHandlers() {
+            // Auto-save form data on changes
+            this.$watch('formData', () => {
+                this.saveFormData();
+            }, { deep: true });
+            
+            // Handle form submission
+            document.addEventListener('htmx:afterRequest', (event) => {
+                if (event.detail.xhr.status === 200) {
+                    this.showSuccessModal(event.detail.xhr.response);
+                }
+            });
+        },
+        
+        nextStep() {
+            if (this.validateCurrentStep()) {
+                this.step++;
+                this.updateProgress();
+            }
+        },
+        
+        previousStep() {
+            this.step--;
+            this.updateProgress();
+        },
+        
+        validateCurrentStep() {
+            if (this.step === 1) {
+                if (!this.formData.customer_phone || !this.formData.customer_name) {
+                    this.showError('Por favor complete todos los campos requeridos');
+                    return false;
+                }
+            } else if (this.step === 2) {
+                if (!this.formData.description) {
+                    this.showError('Por favor complete la descripción del paquete');
+                    return false;
+                }
+            }
+            return true;
+        },
+        
+        updateProgress() {
+            // Update progress indicators
+            const steps = document.querySelectorAll('[data-step]');
+            steps.forEach((step, index) => {
+                if (index + 1 <= this.step) {
+                    step.classList.add('bg-blue-600', 'text-white');
+                    step.classList.remove('bg-gray-300', 'text-gray-500');
+                } else {
+                    step.classList.add('bg-gray-300', 'text-gray-500');
+                    step.classList.remove('bg-blue-600', 'text-white');
+                }
+            });
+        },
+        
+        getCityName(cityCode) {
+            const cities = {
+                'bogota': 'Bogotá',
+                'medellin': 'Medellín',
+                'cali': 'Cali',
+                'barranquilla': 'Barranquilla',
+                'cartagena': 'Cartagena',
+                'otro': 'Otra'
+            };
+            return cities[cityCode] || cityCode;
+        },
+        
+        getPackageTypeName(type) {
+            return type === 'normal' ? 'Paquete Normal' : 'Paquete Extra Dimensionado';
+        },
+        
+        getPackageCost(type) {
+            return type === 'normal' ? '$1,500 COP' : '$2,000 COP';
+        },
+        
+        getDimensions() {
+            const dims = [];
+            if (this.formData.length_cm) dims.push(`L: ${this.formData.length_cm}cm`);
+            if (this.formData.width_cm) dims.push(`A: ${this.formData.width_cm}cm`);
+            if (this.formData.height_cm) dims.push(`H: ${this.formData.height_cm}cm`);
+            return dims.length > 0 ? dims.join(' x ') : 'No especificadas';
+        },
+        
+        showSuccessModal(response) {
+            try {
+                const data = JSON.parse(response);
+                if (data.tracking_number) {
+                    document.getElementById('tracking-number').textContent = data.tracking_number;
+                    document.getElementById('success-modal').style.display = 'block';
+                    
+                    // Clear form data
+                    localStorage.removeItem('announceFormData');
+                }
+            } catch (error) {
+                console.error('Error parsing response:', error);
+            }
+        },
+        
+        showError(message) {
+            // Show error message using Alpine.js app function
+            if (window.app && window.app.showError) {
+                window.app.showError(message);
+            } else {
+                alert(message);
+            }
+        }
+    }
+}
+
+// Setup modal close handler
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('close-modal').addEventListener('click', function() {
+        document.getElementById('success-modal').style.display = 'none';
+        window.location.href = '/receive';
+    });
+});
+</script>
+{% endblock %}

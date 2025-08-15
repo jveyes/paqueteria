@@ -1,0 +1,387 @@
+{% extends "layouts/base.html" %}
+{% from "components/form.html" import text_input, select, search_input %}
+
+{% block title %}Dashboard - Administración{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Dashboard de Administración</h1>
+                <p class="mt-2 text-gray-600">Panel de control y estadísticas del sistema</p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-chart-line text-blue-600 text-2xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-box text-blue-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Paquetes</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.total_packages }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-5 py-3">
+                <div class="text-sm">
+                    <span class="text-green-600 font-medium">+{{ stats.packages_today }}</span>
+                    <span class="text-gray-500">hoy</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-users text-green-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Clientes Activos</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.active_customers }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-5 py-3">
+                <div class="text-sm">
+                    <span class="text-green-600 font-medium">+{{ stats.new_customers_today }}</span>
+                    <span class="text-gray-500">nuevos hoy</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-dollar-sign text-yellow-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Ingresos Hoy</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.revenue_today }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-5 py-3">
+                <div class="text-sm">
+                    <span class="text-green-600 font-medium">+{{ stats.revenue_growth }}%</span>
+                    <span class="text-gray-500">vs ayer</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-truck text-purple-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Entregas Hoy</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.deliveries_today }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-5 py-3">
+                <div class="text-sm">
+                    <span class="text-green-600 font-medium">{{ stats.delivery_rate }}%</span>
+                    <span class="text-gray-500">tasa de entrega</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Analytics -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <!-- Package Status Chart -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Estado de Paquetes</h3>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 bg-blue-500 rounded-full mr-3"></div>
+                        <span class="text-sm text-gray-700">Anunciados</span>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">{{ stats.announced_count }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 bg-yellow-500 rounded-full mr-3"></div>
+                        <span class="text-sm text-gray-700">Recibidos</span>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">{{ stats.received_count }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
+                        <span class="text-sm text-gray-700">Entregados</span>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">{{ stats.delivered_count }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 bg-red-500 rounded-full mr-3"></div>
+                        <span class="text-sm text-gray-700">Expirados</span>
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">{{ stats.expired_count }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Chart -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Ingresos por Día (Últimos 7 días)</h3>
+            <div class="h-64 flex items-end justify-between space-x-2">
+                {% for day in revenue_chart %}
+                <div class="flex-1 flex flex-col items-center">
+                    <div class="w-full bg-blue-200 rounded-t" style="height: {{ day.percentage }}%"></div>
+                    <span class="text-xs text-gray-500 mt-1">{{ day.date }}</span>
+                    <span class="text-xs font-medium text-gray-700">{{ day.amount }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <!-- Recent Packages -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Paquetes Recientes</h3>
+            </div>
+            <div class="divide-y divide-gray-200">
+                {% for package in recent_packages %}
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <i class="fas fa-box text-blue-600 text-sm"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-900">{{ package.tracking_number }}</p>
+                                <p class="text-sm text-gray-500">{{ package.customer.full_name }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-900">{{ package.formatted_cost }}</p>
+                            <p class="text-sm text-gray-500">{{ package.status.value|title }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="px-6 py-4 text-center text-gray-500">
+                    No hay paquetes recientes
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Deliveries -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Entregas Recientes</h3>
+            </div>
+            <div class="divide-y divide-gray-200">
+                {% for delivery in recent_deliveries %}
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                                    <i class="fas fa-truck text-green-600 text-sm"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-900">{{ delivery.package.tracking_number }}</p>
+                                <p class="text-sm text-gray-500">{{ delivery.recipient_name or 'N/A' }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-900">{{ delivery.formatted_amount_paid }}</p>
+                            <p class="text-sm text-gray-500">{{ delivery.payment_method.value|title }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="px-6 py-4 text-center text-gray-500">
+                    No hay entregas recientes
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Acciones Rápidas</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <a href="/announce" 
+               class="flex items-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-plus text-blue-600 text-xl"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900">Anunciar Paquete</p>
+                    <p class="text-sm text-gray-500">Crear nuevo anuncio</p>
+                </div>
+            </a>
+
+            <a href="/receive" 
+               class="flex items-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-download text-green-600 text-xl"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900">Recibir Paquetes</p>
+                    <p class="text-sm text-gray-500">Gestionar recepciones</p>
+                </div>
+            </a>
+
+            <a href="/deliver" 
+               class="flex items-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-truck text-purple-600 text-xl"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900">Entregar Paquetes</p>
+                    <p class="text-sm text-gray-500">Procesar entregas</p>
+                </div>
+            </a>
+
+            <a href="/admin/reports" 
+               class="flex items-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-chart-bar text-yellow-600 text-xl"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900">Ver Reportes</p>
+                    <p class="text-sm text-gray-500">Análisis detallado</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- System Health -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Estado del Sistema</h3>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                        <span class="text-sm text-gray-700">Base de Datos</span>
+                    </div>
+                    <span class="text-sm text-green-600 font-medium">Operativo</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                        <span class="text-sm text-gray-700">SMS API</span>
+                    </div>
+                    <span class="text-sm text-green-600 font-medium">Conectado</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                        <span class="text-sm text-gray-700">Almacenamiento</span>
+                    </div>
+                    <span class="text-sm text-green-600 font-medium">Disponible</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
+                        <span class="text-sm text-gray-700">Backup</span>
+                    </div>
+                    <span class="text-sm text-yellow-600 font-medium">Último: {{ last_backup }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Notificaciones Recientes</h3>
+            <div class="space-y-4">
+                {% for notification in recent_notifications %}
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                            <i class="fas fa-bell text-blue-600 text-sm"></i>
+                        </div>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-gray-900">{{ notification.message }}</p>
+                        <p class="text-xs text-gray-500">{{ notification.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-gray-500">
+                    No hay notificaciones recientes
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Real-time Updates -->
+<script>
+// Auto-refresh dashboard data every 30 seconds
+setInterval(() => {
+    if (!document.hidden) {
+        // Refresh stats
+        htmx.ajax('GET', '/api/admin/stats', {
+            target: '#stats-container',
+            swap: 'innerHTML'
+        });
+        
+        // Refresh recent activity
+        htmx.ajax('GET', '/api/admin/recent-activity', {
+            target: '#recent-activity',
+            swap: 'innerHTML'
+        });
+    }
+}, 30000);
+
+// Setup real-time notifications
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for new notifications every 60 seconds
+    setInterval(() => {
+        fetch('/api/notifications/count')
+            .then(response => response.json())
+            .then(data => {
+                if (data.count > 0) {
+                    // Show notification badge
+                    const badge = document.getElementById('notification-badge');
+                    if (badge) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'block';
+                    }
+                }
+            })
+            .catch(error => console.error('Error checking notifications:', error));
+    }, 60000);
+});
+</script>
+{% endblock %}

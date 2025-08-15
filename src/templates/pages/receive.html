@@ -1,0 +1,425 @@
+{% extends "layouts/base.html" %}
+{% from "components/form.html" import text_input, textarea, select, checkbox, search_input, pagination %}
+
+{% block title %}Recibir Paquetes - Sistema de Paquetería{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Recibir Paquetes</h1>
+                <p class="mt-2 text-gray-600">Gestionar la recepción de paquetes anunciados</p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-download text-blue-600 text-2xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-box text-blue-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Paquetes Anunciados</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.announced_count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-clock text-yellow-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Pendientes de Recepción</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.pending_count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Urgentes</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.urgent_count }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-calendar text-green-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Recibidos Hoy</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ stats.received_today }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+                {{ search_input("search", "Buscar por tracking, cliente...", search_query) }}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                {{ select("status_filter", "", [
+                    ("all", "Todos"),
+                    ("announced", "Anunciados"),
+                    ("received", "Recibidos"),
+                    ("urgent", "Urgentes")
+                ], status_filter) }}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                {{ select("type_filter", "", [
+                    ("all", "Todos"),
+                    ("normal", "Normal"),
+                    ("extra_dimensioned", "Extra Dimensionado")
+                ], type_filter) }}
+            </div>
+            
+            <div class="flex items-end">
+                <button type="button" 
+                        @click="applyFilters()"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-filter mr-2"></i>
+                    Filtrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Packages List -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+        <ul class="divide-y divide-gray-200" id="packages-list">
+            {% for package in packages %}
+            <li class="package-item" 
+                data-tracking="{{ package.tracking_number }}"
+                data-status="{{ package.status.value }}"
+                data-type="{{ package.package_type.value }}"
+                data-urgent="{{ package.is_urgent|lower }}">
+                <div class="px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <i class="fas fa-box text-blue-600"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="flex items-center">
+                                    <p class="text-sm font-medium text-gray-900">
+                                        {{ package.tracking_number }}
+                                        {% if package.is_urgent %}
+                                            <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>Urgente
+                                            </span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="mt-1 flex items-center text-sm text-gray-500">
+                                    <p class="truncate">{{ package.description }}</p>
+                                </div>
+                                <div class="mt-1 flex items-center text-sm text-gray-500">
+                                    <i class="fas fa-user mr-1"></i>
+                                    <span>{{ package.customer.full_name }}</span>
+                                    <span class="mx-2">•</span>
+                                    <i class="fas fa-phone mr-1"></i>
+                                    <span>{{ package.customer.formatted_phone }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-4">
+                            <div class="text-right">
+                                <p class="text-sm font-medium text-gray-900">
+                                    {{ package.formatted_cost }}
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    {{ package.get_package_type_display() }}
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    Anunciado: {{ package.announced_at.strftime('%d/%m/%Y %H:%M') }}
+                                </p>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2">
+                                {% if package.status.value == 'announced' %}
+                                    <button type="button"
+                                            @click="receivePackage('{{ package.tracking_number }}')"
+                                            class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                        <i class="fas fa-check mr-1"></i>
+                                        Recibir
+                                    </button>
+                                {% else %}
+                                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <i class="fas fa-check mr-1"></i>
+                                        Recibido
+                                    </span>
+                                {% endif %}
+                                
+                                <button type="button"
+                                        @click="viewDetails('{{ package.tracking_number }}')"
+                                        class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <i class="fas fa-eye mr-1"></i>
+                                    Ver
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            {% else %}
+            <li class="px-4 py-8 text-center">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-box-open text-gray-400 text-4xl mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No hay paquetes</h3>
+                    <p class="text-gray-500">No se encontraron paquetes con los filtros aplicados.</p>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Pagination -->
+    {% if packages and packages|length > 0 %}
+        {{ pagination(page, total_pages, "/receive") }}
+    {% endif %}
+</div>
+
+<!-- Receive Package Modal -->
+<div id="receive-modal" 
+     class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+     style="display: none;"
+     x-data="receiveModal()">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                <i class="fas fa-check text-green-600 text-xl"></i>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4 text-center">Recibir Paquete</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500 text-center">
+                    ¿Está seguro de que desea marcar este paquete como recibido?
+                </p>
+                <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <p class="text-sm font-medium text-gray-700">Paquete:</p>
+                    <p class="text-lg font-bold text-blue-600" x-text="selectedPackage"></p>
+                </div>
+                
+                <!-- Additional Notes -->
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Notas de Recepción (Opcional)
+                    </label>
+                    <textarea x-model="receptionNotes"
+                              rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Notas adicionales sobre la recepción..."></textarea>
+                </div>
+            </div>
+            <div class="items-center px-4 py-3 flex space-x-3">
+                <button @click="closeModal()"
+                        class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 text-base font-medium rounded-md shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                    Cancelar
+                </button>
+                <button @click="confirmReceive()"
+                        class="flex-1 px-4 py-2 bg-green-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <i class="fas fa-check mr-2"></i>
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Package Details Modal -->
+<div id="details-modal" 
+     class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+     style="display: none;"
+     x-data="detailsModal()">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Detalles del Paquete</h3>
+                <button @click="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="package-details-content">
+                <!-- Content will be loaded via HTMX -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function receiveModal() {
+    return {
+        selectedPackage: '',
+        receptionNotes: '',
+        
+        openModal(trackingNumber) {
+            this.selectedPackage = trackingNumber;
+            this.receptionNotes = '';
+            document.getElementById('receive-modal').style.display = 'block';
+        },
+        
+        closeModal() {
+            document.getElementById('receive-modal').style.display = 'none';
+        },
+        
+        async confirmReceive() {
+            try {
+                const response = await fetch(`/api/packages/${this.selectedPackage}/receive`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        notes: this.receptionNotes
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Show success message
+                    if (window.app && window.app.showSuccess) {
+                        window.app.showSuccess('Paquete recibido exitosamente');
+                    }
+                    
+                    // Close modal
+                    this.closeModal();
+                    
+                    // Reload the page to update the list
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    const error = await response.json();
+                    if (window.app && window.app.showError) {
+                        window.app.showError(error.detail || 'Error al recibir el paquete');
+                    }
+                }
+            } catch (error) {
+                if (window.app && window.app.showError) {
+                    window.app.showError('Error al recibir el paquete');
+                }
+            }
+        }
+    }
+}
+
+function detailsModal() {
+    return {
+        openModal(trackingNumber) {
+            document.getElementById('details-modal').style.display = 'block';
+            
+            // Load package details via HTMX
+            htmx.ajax('GET', `/api/packages/${trackingNumber}/details`, {
+                target: '#package-details-content',
+                swap: 'innerHTML'
+            });
+        },
+        
+        closeModal() {
+            document.getElementById('details-modal').style.display = 'none';
+        }
+    }
+}
+
+// Global functions for Alpine.js
+window.receivePackage = function(trackingNumber) {
+    Alpine.store('receiveModal').openModal(trackingNumber);
+}
+
+window.viewDetails = function(trackingNumber) {
+    Alpine.store('detailsModal').openModal(trackingNumber);
+}
+
+window.applyFilters = function() {
+    const search = document.querySelector('input[name="search"]').value;
+    const status = document.querySelector('select[name="status_filter"]').value;
+    const type = document.querySelector('select[name="type_filter"]').value;
+    
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (status !== 'all') params.append('status', status);
+    if (type !== 'all') params.append('type', type);
+    
+    const url = `/receive${params.toString() ? '?' + params.toString() : ''}`;
+    window.location.href = url;
+}
+
+// Initialize Alpine.js stores
+document.addEventListener('alpine:init', () => {
+    Alpine.store('receiveModal', receiveModal());
+    Alpine.store('detailsModal', detailsModal());
+});
+
+// Setup HTMX handlers
+document.addEventListener('htmx:afterRequest', (event) => {
+    if (event.detail.xhr.status === 200) {
+        // Handle successful responses
+        const response = event.detail.xhr.response;
+        try {
+            const data = JSON.parse(response);
+            if (data.message) {
+                if (window.app && window.app.showSuccess) {
+                    window.app.showSuccess(data.message);
+                }
+            }
+        } catch (error) {
+            // Not JSON response, continue
+        }
+    }
+});
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    if (!document.hidden) {
+        htmx.ajax('GET', window.location.href, {
+            target: '#packages-list',
+            swap: 'innerHTML'
+        });
+    }
+}, 30000);
+</script>
+{% endblock %}
