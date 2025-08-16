@@ -1,4 +1,8 @@
 {% extends "layouts/base.html" %}
+{% from "components/input.html" import input_field, select_field, checkbox_field %}
+{% from "components/button.html" import button, submit_button %}
+{% from "components/card.html" import card %}
+{% from "components/table.html" import data_table %}
 
 {% block title %}Recibir Paquetes - Sistema de Paquetería{% endblock %}
 
@@ -18,179 +22,112 @@
     </div>
 
     <!-- Search and Filters -->
-    <div class="bg-white shadow rounded-lg mb-6" x-data="receiveFilters()">
-        <div class="p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">
-                <i class="fas fa-search text-primary-600 mr-2"></i>
-                Buscar y Filtrar
-            </h3>
+    {% call card(title="Buscar y Filtrar", icon="fas fa-search text-primary-600") %}
+        <form hx-get="/packages/pending" 
+              hx-target="#packages-list" 
+              hx-trigger="change, submit"
+              hx-indicator="#loading-indicator"
+              class="grid grid-cols-1 md:grid-cols-4 gap-4">
             
-            <form hx-get="/packages/pending" 
-                  hx-target="#packages-list" 
-                  hx-trigger="change, submit"
-                  hx-indicator="#loading-indicator"
-                  class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                
-                <!-- Search -->
-                <div>
-                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">
-                        Buscar
-                    </label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                        <input type="text" 
-                               id="search" 
-                               name="search" 
-                               x-model="filters.search"
-                               class="pl-10 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                               placeholder="Tracking, cliente, descripción...">
-                    </div>
-                </div>
-                
-                <!-- Status Filter -->
-                <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">
-                        Estado
-                    </label>
-                    <select id="status" 
-                            name="status" 
-                            x-model="filters.status"
-                            class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
-                        <option value="">Todos</option>
-                        <option value="announced">Anunciados</option>
-                        <option value="received">Recibidos</option>
-                        <option value="delivered">Entregados</option>
-                        <option value="expired">Expirados</option>
-                    </select>
-                </div>
-                
-                <!-- Date Range -->
-                <div>
-                    <label for="date_from" class="block text-sm font-medium text-gray-700 mb-2">
-                        Desde
-                    </label>
-                    <input type="date" 
-                           id="date_from" 
-                           name="date_from" 
-                           x-model="filters.date_from"
-                           class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
-                </div>
-                
-                <div>
-                    <label for="date_to" class="block text-sm font-medium text-gray-700 mb-2">
-                        Hasta
-                    </label>
-                    <input type="date" 
-                           id="date_to" 
-                           name="date_to" 
-                           x-model="filters.date_to"
-                           class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500">
-                </div>
+            <!-- Search -->
+            {{ input_field(
+                "search",
+                "Buscar",
+                placeholder="Tracking, cliente, descripción...",
+                icon="fas fa-search",
+                help_text="Buscar por número de tracking, cliente o descripción"
+            ) }}
+            
+            <!-- Status Filter -->
+            {{ select_field(
+                "status",
+                "Estado",
+                options=[
+                    ("", "Todos"),
+                    ("announced", "Anunciados"),
+                    ("received", "Recibidos"),
+                    ("delivered", "Entregados"),
+                    ("expired", "Expirados")
+                ],
+                placeholder="Seleccionar estado"
+            ) }}
+            
+            <!-- Date Range -->
+            {{ input_field(
+                "date_from",
+                "Desde",
+                type="date",
+                help_text="Fecha de inicio para filtrar"
+            ) }}
+            
+            {{ input_field(
+                "date_to",
+                "Hasta",
+                type="date",
+                help_text="Fecha de fin para filtrar"
+            ) }}
                 
                 <!-- Additional Filters -->
                 <div class="md:col-span-4">
-                    <div class="flex flex-wrap gap-4">
-                        <div class="flex items-center">
-                            <input type="checkbox" 
-                                   id="urgent_only" 
-                                   name="urgent_only" 
-                                   x-model="filters.urgent_only"
-                                   class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
-                            <label for="urgent_only" class="ml-2 block text-sm text-gray-900">
-                                Solo Urgentes
-                            </label>
-                        </div>
+                    <div class="flex flex-wrap gap-4 items-center">
+                        {{ checkbox_field(
+                            "urgent_only",
+                            "Solo Urgentes",
+                            help_text="Mostrar solo paquetes marcados como urgentes"
+                        ) }}
                         
-                        <div class="flex items-center">
-                            <input type="checkbox" 
-                                   id="with_storage_fee" 
-                                   name="with_storage_fee" 
-                                   x-model="filters.with_storage_fee"
-                                   class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
-                            <label for="with_storage_fee" class="ml-2 block text-sm text-gray-900">
-                                Con Bodegaje
-                            </label>
-                        </div>
+                        {{ checkbox_field(
+                            "with_storage_fee",
+                            "Con Bodegaje",
+                            help_text="Mostrar paquetes con costo de bodegaje aplicado"
+                        ) }}
                         
-                        <button type="button" 
-                                @click="clearFilters"
-                                class="text-sm text-primary-600 hover:text-primary-500">
-                            <i class="fas fa-times mr-1"></i>
-                            Limpiar Filtros
-                        </button>
+                        {{ button(
+                            "Limpiar Filtros",
+                            type="button",
+                            variant="secondary",
+                            size="sm",
+                            icon="fas fa-times",
+                            classes="ml-auto"
+                        ) }}
                     </div>
                 </div>
             </form>
-        </div>
-    </div>
+        {% endcall %}
 
     <!-- Statistics Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-clock text-yellow-600 text-2xl"></i>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Pendientes</dt>
-                            <dd class="text-lg font-medium text-gray-900" id="pending-count">0</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
+        {{ stat_card(
+            "Pendientes",
+            "0",
+            icon="fas fa-clock text-yellow-600",
+            classes="",
+            id="pending-count"
+        ) }}
         
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-check text-green-600 text-2xl"></i>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Recibidos Hoy</dt>
-                            <dd class="text-lg font-medium text-gray-900" id="received-today">0</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
+        {{ stat_card(
+            "Recibidos Hoy",
+            "0",
+            icon="fas fa-check text-green-600",
+            classes="",
+            id="received-today"
+        ) }}
         
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Urgentes</dt>
-                            <dd class="text-lg font-medium text-gray-900" id="urgent-count">0</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
+        {{ stat_card(
+            "Urgentes",
+            "0",
+            icon="fas fa-exclamation-triangle text-red-600",
+            classes="",
+            id="urgent-count"
+        ) }}
         
-        <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-dollar-sign text-blue-600 text-2xl"></i>
-                    </div>
-                    <div class="ml-5 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Ingresos Hoy</dt>
-                            <dd class="text-lg font-medium text-gray-900" id="revenue-today">$0</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
+        {{ stat_card(
+            "Ingresos Hoy",
+            "$0",
+            icon="fas fa-dollar-sign text-purple-600",
+            classes="",
+            id="revenue-today"
+        ) }}
     </div>
 
     <!-- Packages List -->
